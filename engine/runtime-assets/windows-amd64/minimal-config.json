@@ -1,0 +1,97 @@
+{
+  "log": {
+    "disabled": false,
+    "level": "info",
+    "output": "",
+    "timestamp": false
+  },
+  "experimental": {
+    "clash_api": {
+      "external_controller": "127.0.0.1:20123",
+      "secret": "",
+      "default_mode": "rule",
+      "access_control_allow_origin": [
+        "*"
+      ],
+      "access_control_allow_private_network": false
+    },
+    "cache_file": {
+      "enabled": true,
+      "path": "cache.db",
+      "cache_id": "sdk-smoke",
+      "store_fakeip": false,
+      "store_rdrc": false,
+      "rdrc_timeout": "7d"
+    }
+  },
+  "inbounds": [
+    {
+      "type": "mixed",
+      "tag": "mixed-in",
+      "listen": "127.0.0.1",
+      "listen_port": 20122
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "type": "block",
+      "tag": "block"
+    },
+    {
+      "type": "selector",
+      "tag": "GLOBAL",
+      "outbounds": [
+        "direct",
+        "block"
+      ],
+      "interrupt_exist_connections": true
+    },
+    {
+      "type": "selector",
+      "tag": "outbound-direct",
+      "outbounds": [
+        "direct",
+        "block"
+      ],
+      "interrupt_exist_connections": true
+    }
+  ],
+  "route": {
+    "rules": [
+      {
+        "action": "route",
+        "clash_mode": "direct",
+        "outbound": "outbound-direct"
+      },
+      {
+        "action": "route",
+        "clash_mode": "global",
+        "outbound": "GLOBAL"
+      }
+    ],
+    "auto_detect_interface": true,
+    "final": "outbound-direct",
+    "default_domain_resolver": {
+      "server": "dns-remote"
+    }
+  },
+  "dns": {
+    "servers": [
+      {
+        "type": "udp",
+        "tag": "dns-remote",
+        "server": "8.8.8.8",
+        "server_port": 53
+      }
+    ],
+    "rules": [],
+    "disable_cache": false,
+    "disable_expire": false,
+    "independent_cache": false,
+    "final": "dns-remote"
+  }
+}
