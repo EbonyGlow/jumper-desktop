@@ -2,6 +2,7 @@
 #define FLUTTER_PLUGIN_JUMPER_SDK_PLATFORM_PLUGIN_H_
 
 #include <flutter/method_channel.h>
+#include <flutter/encodable_value.h>
 #include <flutter/plugin_registrar_windows.h>
 
 #include <memory>
