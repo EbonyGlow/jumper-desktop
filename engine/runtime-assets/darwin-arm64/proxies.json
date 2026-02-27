@@ -1,0 +1,1 @@
+{"proxies": {"GLOBAL":{"type":"Selector","name":"GLOBAL","udp":true,"history":[],"now":"direct","all":["direct","block"]},"direct":{"type":"Direct","name":"direct","udp":true,"history":[]},"block":{"type":"Reject","name":"block","udp":true,"history":[]},"outbound-direct":{"type":"Selector","name":"outbound-direct","udp":true,"history":[],"now":"direct","all":["direct","block"]}}}

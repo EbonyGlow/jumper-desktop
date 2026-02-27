@@ -1,0 +1,4 @@
+INFO[0000] network: updated default interface en0, index 13
+INFO[0000] inbound/mixed[mixed-in]: tcp server started at 127.0.0.1:20122
+INFO[0000] clash-api: restful api listening at 127.0.0.1:20123
+INFO[0000] sing-box started (0.22s)

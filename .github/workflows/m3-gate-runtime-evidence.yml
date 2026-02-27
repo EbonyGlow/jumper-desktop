@@ -1,0 +1,54 @@
+name: M3 Gate Runtime Evidence
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "engine/runtime-assets/**"
+      - "run-runtime-release-check.sh"
+      - ".github/workflows/m3-gate-runtime-evidence.yml"
+
+jobs:
+  runtime-flow:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            platform_arch: darwin-arm64
+          - os: ubuntu-22.04
+            platform_arch: linux-amd64
+          - os: windows-2022
+            platform_arch: windows-amd64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure scripts are executable
+        run: |
+          chmod +x engine/runtime-assets/fetch-sing-box.sh
+          chmod +x engine/runtime-assets/generate-checksums.sh
+          chmod +x engine/runtime-assets/verify-checksums.sh
+          chmod +x engine/runtime-assets/validate-runtime-chain.sh
+
+      - name: Fetch runtime asset
+        run: ./engine/runtime-assets/fetch-sing-box.sh "${{ matrix.platform_arch }}" 1.12.22
+
+      - name: Verify checksums for platform
+        run: ./engine/runtime-assets/verify-checksums.sh "${{ matrix.platform_arch }}"
+
+      - name: Validate runtime chain
+        run: ./engine/runtime-assets/validate-runtime-chain.sh "${{ matrix.platform_arch }}" 1.12.22
+
+      - name: Upload runtime evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-evidence-${{ matrix.platform_arch }}
+          path: |
+            engine/runtime-assets/checksums.json
+            engine/runtime-assets/${{ matrix.platform_arch }}/runtime.log
+            engine/runtime-assets/${{ matrix.platform_arch }}/proxies.json

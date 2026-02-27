@@ -1,0 +1,11 @@
+platform_arch=darwin-arm64
+version=1.12.22
+duration_seconds=180
+interval_seconds=5
+iterations=36
+success_count=36
+failure_count=0
+avg_latency_ms=35
+max_latency_ms=41
+jsonl_path=/Users/sean/Desktop/cyber/jumper-desktop/engine/runtime-assets/darwin-arm64/stability/stability-20260226-140841.jsonl
+runtime_log_path=/Users/sean/Desktop/cyber/jumper-desktop/engine/runtime-assets/darwin-arm64/stability/stability-20260226-140841.runtime.log

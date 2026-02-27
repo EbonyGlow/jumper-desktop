@@ -1,0 +1,17 @@
+{
+  "overall_passed": true,
+  "results": {
+    "case1_first_install_cleanup": {
+      "exit_code": 1,
+      "runtime_root_exists": true,
+      "runtime_root_contents": [],
+      "passed": true,
+      "tail_log": "nnect to 127.0.0.1 port 9 after 0 ms: Couldn't connect to server\ncurl: (7) Failed to connect to 127.0.0.1 port 9 after 0 ms: Couldn't connect to server\ncurl: (7) Failed to connect to 127.0.0.1 port 9 after 0 ms: Couldn't connect to server\ncurl: (7) Failed to connect to 127.0.0.1 port 9 after 0 ms: Couldn't connect to server\ncurl: (7) Failed to connect to 127.0.0.1 port 9 after 0 ms: Couldn't connect to server\ncurl: (7) Failed to connect to 127.0.0.1 port 9 after 0 ms: Couldn't connect to server\n"
+    },
+    "case2_rollback_restore_hidden": {
+      "exit_code": 1,
+      "passed": true,
+      "tail_log": "nnect to 127.0.0.1 port 9 after 0 ms: Couldn't connect to server\ncurl: (7) Failed to connect to 127.0.0.1 port 9 after 0 ms: Couldn't connect to server\ncurl: (7) Failed to connect to 127.0.0.1 port 9 after 0 ms: Couldn't connect to server\ncurl: (7) Failed to connect to 127.0.0.1 port 9 after 0 ms: Couldn't connect to server\ncurl: (7) Failed to connect to 127.0.0.1 port 9 after 0 ms: Couldn't connect to server\ncurl: (7) Failed to connect to 127.0.0.1 port 9 after 0 ms: Couldn't connect to server\n"
+    }
+  }
+}

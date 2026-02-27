@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "artifacts": {
+    "darwin-arm64": {
+      "version": "1.12.22",
+      "archive": {
+        "path": "darwin-arm64/sing-box-1.12.22-darwin-arm64.tar.gz",
+        "sha256": "974d924c36af92a9aecab5e630555764aa665fb8210e58a48c01faec5d55de0f"
+      },
+      "binary": {
+        "path": "darwin-arm64/sing-box-1.12.22-darwin-arm64/sing-box",
+        "sha256": "d60943c8c8def138f292ff7f36db8bcad4b80647e9ceebbef014f924ca05ce82"
+      }
+    },
+    "darwin-amd64": {
+      "version": "1.12.22",
+      "archive": {
+        "path": "darwin-amd64/sing-box-1.12.22-darwin-amd64.tar.gz",
+        "sha256": "950072cf2f1e0d4aa216116e0b1f9f7542aa953c1487b55516ea9d04bd73bbc6"
+      },
+      "binary": {
+        "path": "darwin-amd64/sing-box-1.12.22-darwin-amd64/sing-box",
+        "sha256": "80eea164fac7ce6e961f7d406de92642e96be88534cf9395fa2b77f33dd6b6ac"
+      }
+    },
+    "linux-amd64": {
+      "version": "1.12.22",
+      "archive": {
+        "path": "linux-amd64/sing-box-1.12.22-linux-amd64.tar.gz",
+        "sha256": "50a70a1b71064a7d8ef63737fbef2aa36c991d8dc1c54598b9513c2a15e25e9f"
+      },
+      "binary": {
+        "path": "linux-amd64/sing-box-1.12.22-linux-amd64/sing-box",
+        "sha256": "56a89bc2dd84023e39cdedc03413fcad55e3a42460681e66948cf5a2c07655dd"
+      }
+    },
+    "linux-arm64": {
+      "version": "1.12.22",
+      "archive": {
+        "path": "linux-arm64/sing-box-1.12.22-linux-arm64.tar.gz",
+        "sha256": "95a9c143e6488584868fc5c03d809c88519c6af0d4ca4cb1fa8a49cc397ae992"
+      },
+      "binary": {
+        "path": "linux-arm64/sing-box-1.12.22-linux-arm64/sing-box",
+        "sha256": "202e69143ba2d106c0f05f01daa08be237ecea004557ae2bbd61661175a5ac1d"
+      }
+    },
+    "windows-amd64": {
+      "version": "1.12.22",
+      "archive": {
+        "path": "windows-amd64/sing-box-1.12.22-windows-amd64.zip",
+        "sha256": "3c0f046e163ecb32ec2757f693daae1f4f138547535f6cc5d6a4bd9a7a086175"
+      },
+      "binary": {
+        "path": "windows-amd64/sing-box-1.12.22-windows-amd64/sing-box.exe",
+        "sha256": "6d35e8635c7956f69cdd63abfcdaee1ce6937f176a34458f05c7b0ae0ce6d926"
+      }
+    }
+  },
+  "generated_at_utc": "2026-02-26T07:12:54Z"
+}

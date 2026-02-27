@@ -1,0 +1,8 @@
+ERROR[0000] network: update interface: route ip+net: operation not permitted
+INFO[0000] inbound/mixed[mixed-in]: tcp server started at 127.0.0.1:20122
+INFO[0000] clash-api: restful api listening at 127.0.0.1:20123
+INFO[0000] sing-box started (0.33s)
+ERROR[0014] network: update interface: route ip+net: operation not permitted
+ERROR[0040] network: update interface: route ip+net: operation not permitted
+ERROR[0290] network: update interface: route ip+net: operation not permitted
+ERROR[0294] network: update interface: route ip+net: operation not permitted
