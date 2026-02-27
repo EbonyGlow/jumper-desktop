@@ -4,8 +4,8 @@
 
 - M1：未启动（本轮交付聚焦 M2/M3）。
 - M2：已完成并通过。
-- M3：`M3-01 ~ M3-06` 已完成，`M3-GATE` 待补 Linux/Windows 证据后勾选。
-- 当前发布阻塞：缺少 Linux/Windows 全流程证据归档（建议走 CI workflow）。
+- M3：`M3-01 ~ M3-06` 与 `M3-GATE` 均已完成。
+- 当前发布阻塞：无（M3 证据链已闭环）。
 
 ## Phase M1 - Headless Core
 
@@ -39,7 +39,7 @@
 - [x] M3-04 capability: notify
 - [x] M3-05 capability: tray
 - [x] M3-06 发布文档与外部接入示例
-- [ ] M3-GATE 通过 M3 硬验收门槛
+- [x] M3-GATE 通过 M3 硬验收门槛
 
 ## Blocking Issues
 
@@ -77,15 +77,13 @@
   - 新增：`RELEASE_GUIDE.md`（发布门禁、证据矩阵、回滚策略）
   - 新增：`EXTERNAL_INTEGRATION_EXAMPLE.md`（外部 Flutter 项目接入示例）
 - M3-GATE 当前状态：
-  - 已满足：runtime 校验失败阻断、回滚能力、macOS 全流程与长稳验证
-  - 最新复核：`run-runtime-release-check.sh darwin-arm64 1.12.22 com.example.sdkSmokeApp` 已通过
-  - 待补：Linux/Windows 各 1 次全流程证据（建议在 CI runner 执行并归档）
-- M3-GATE 自动化补齐：
+  - 已满足：runtime 校验失败阻断、回滚能力、macOS/Linux/Windows 全流程证据归档
+  - 最新复核：`M3 Gate Runtime Evidence` 与 `SDK Platform Native Evidence` 均已通过
+- M3-GATE 自动化补齐（已闭环）：
   - 新增 CI：`.github/workflows/m3-gate-runtime-evidence.yml`（macOS/Linux/Windows 三平台矩阵）
   - 新增清单：`M3_GATE_EVIDENCE.md`（触发方式、artifact 要求、勾选规则）
   - 新增核对脚本：`verify-m3-gate-evidence.sh`（对三平台 artifacts 一键验收）
-  - 当前阻塞：本地目录非 git 仓库且未登录 `gh`，无法在本机直接触发 GitHub Actions
-  - 执行决策：该步骤暂时跳过，待后续需要发布前再补齐并勾选 `M3-GATE`
+  - 执行结果：三平台证据已在 CI runner 完成并归档，`M3-GATE` 已勾选
 - 收尾输出：
   - 新增 `RELEASE_DAY_COMMANDS.md`（发布日一页式命令手册）
 - 严格审计修复：
