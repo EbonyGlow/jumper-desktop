@@ -162,11 +162,17 @@ std::string JumperSdkPlatformPlugin::RuntimeContainerRoot() const {
     CoTaskMemFree(app_data);
   }
   if (root.empty()) {
-    const char* profile = std::getenv("USERPROFILE");
-    if (profile != nullptr && std::string(profile).size() > 0) {
+    char* profile = nullptr;
+    size_t profile_len = 0;
+    if (_dupenv_s(&profile, &profile_len, "USERPROFILE") == 0 &&
+        profile != nullptr &&
+        profile_len > 1) {
       root = std::string(profile) + "\\AppData\\Roaming\\jumper-runtime";
     } else {
       root = ".\\jumper-runtime";
+    }
+    if (profile != nullptr) {
+      free(profile);
     }
   }
   return root;
