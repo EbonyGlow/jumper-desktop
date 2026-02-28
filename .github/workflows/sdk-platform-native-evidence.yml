@@ -73,6 +73,7 @@ jobs:
         if: runner.os == 'Linux'
         working-directory: flutter/packages/jumper_sdk_platform/example
         run: |
+          set -o pipefail
           mkdir -p ../../../.artifacts/sdk-platform-native-${{ matrix.artifact_suffix }}
           xvfb-run -a flutter test integration_test/plugin_integration_test.dart -d linux \
             --dart-define=JUMPER_WORKSPACE_BASE_PATH="${{ github.workspace }}" \
@@ -83,6 +84,7 @@ jobs:
         if: runner.os == 'macOS'
         working-directory: flutter/packages/jumper_sdk_platform/example
         run: |
+          set -o pipefail
           mkdir -p ../../../.artifacts/sdk-platform-native-${{ matrix.artifact_suffix }}
           flutter test integration_test/plugin_integration_test.dart -d macos \
             --dart-define=JUMPER_WORKSPACE_BASE_PATH="${{ github.workspace }}" \
@@ -99,6 +101,9 @@ jobs:
             --dart-define=JUMPER_WORKSPACE_BASE_PATH="${{ github.workspace }}" `
             --dart-define=JUMPER_RUNTIME_VERSION="${{ steps.runtime.outputs.version }}" 2>&1 |
             Tee-Object -FilePath "..\..\..\.artifacts\sdk-platform-native-${{ matrix.artifact_suffix }}\native-evidence.log"
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
 
       - name: Write evidence summary
         if: always()
