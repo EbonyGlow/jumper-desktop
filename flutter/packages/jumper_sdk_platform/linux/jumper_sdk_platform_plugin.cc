@@ -51,7 +51,7 @@ static void jumper_sdk_platform_plugin_handle_method_call(
   };
 
   auto parse_launch_options =
-      [&](FlValue* args, gchar** binary_path, gchar*** launch_args, gchar** working_dir) {
+      [&](FlValue* args, gchar** binary_path, gchar*** launch_args, gchar** working_dir) -> gboolean {
         *binary_path = nullptr;
         *launch_args = nullptr;
         *working_dir = nullptr;
@@ -98,7 +98,7 @@ static void jumper_sdk_platform_plugin_handle_method_call(
       };
 
   auto start_real_process = [&](gchar* binary_path, gchar** launch_args, gchar* working_dir,
-                                GError** error) {
+                                GError** error) -> gboolean {
     stop_real_process();
     GPid pid = 0;
     const gboolean started = g_spawn_async(
@@ -127,7 +127,7 @@ static void jumper_sdk_platform_plugin_handle_method_call(
 
   auto parse_runtime_request =
       [&](FlMethodCall* call, gboolean require_base_path, gchar** version, gchar** platform_arch,
-          gchar** base_path, GError** error) {
+          gchar** base_path, GError** error) -> gboolean {
         *version = nullptr;
         *platform_arch = nullptr;
         *base_path = nullptr;
@@ -172,7 +172,7 @@ static void jumper_sdk_platform_plugin_handle_method_call(
     return g_build_filename(g_get_home_dir(), ".local", "share", "jumper-runtime", nullptr);
   };
 
-  auto copy_file_replace = [&](const gchar* source, const gchar* destination, GError** error) {
+  auto copy_file_replace = [&](const gchar* source, const gchar* destination, GError** error) -> gboolean {
     gchar* bytes = nullptr;
     gsize length = 0;
     if (!g_file_get_contents(source, &bytes, &length, error)) {
