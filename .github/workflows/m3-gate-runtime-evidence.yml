@@ -43,12 +43,12 @@ jobs:
         id: resolved
         run: |
           RESOLVED_VERSION="$(python3 - <<'PY'
-import json
-from pathlib import Path
-data = json.loads(Path("engine/runtime-assets/resolved-runtime-lock.json").read_text())
-print(data["resolved_version"])
-PY
-)"
+          import json
+          from pathlib import Path
+          data = json.loads(Path("engine/runtime-assets/resolved-runtime-lock.json").read_text())
+          print(data["resolved_version"])
+          PY
+          )"
           echo "version=${RESOLVED_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Validate runtime chain

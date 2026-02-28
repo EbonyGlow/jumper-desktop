@@ -53,11 +53,11 @@ jobs:
         shell: bash
         run: |
           RUNTIME_VERSION="$(python3 - <<'PY'
-import json
-from pathlib import Path
-print(json.loads(Path('engine/runtime-assets/resolved-runtime-lock.json').read_text())['resolved_version'])
-PY
-)"
+          import json
+          from pathlib import Path
+          print(json.loads(Path('engine/runtime-assets/resolved-runtime-lock.json').read_text())['resolved_version'])
+          PY
+          )"
           echo "version=${RUNTIME_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Flutter pub get (example)
