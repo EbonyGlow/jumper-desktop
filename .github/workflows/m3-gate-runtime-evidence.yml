@@ -37,6 +37,8 @@ jobs:
           chmod +x engine/runtime-assets/validate-runtime-chain.sh
 
       - name: Prepare runtime assets (latest)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: ./engine/runtime-assets/prepare-runtime-assets.sh "${{ matrix.platform_arch }}" latest
 
       - name: Resolve prepared runtime version

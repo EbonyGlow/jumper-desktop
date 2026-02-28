@@ -49,6 +49,8 @@ jobs:
 
       - name: Prepare runtime assets for target platform
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           chmod +x engine/runtime-assets/prepare-runtime-assets.sh
           ./engine/runtime-assets/prepare-runtime-assets.sh "${{ matrix.platform_arch }}" latest
