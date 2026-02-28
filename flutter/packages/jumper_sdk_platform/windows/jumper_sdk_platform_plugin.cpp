@@ -5,15 +5,19 @@
 
 // For getPlatformVersion; remove unless needed for your plugin implementation.
 #include <VersionHelpers.h>
+#include <shlobj.h>
 
 #include <flutter/method_channel.h>
 #include <flutter/plugin_registrar_windows.h>
 #include <flutter/standard_method_codec.h>
 
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
+#include <cstdlib>
 
 namespace jumper_sdk_platform {
 
@@ -95,6 +99,145 @@ bool JumperSdkPlatformPlugin::ParseLaunchOptions(
     options->working_directory = std::get<std::string>(wd_it->second);
   }
   return true;
+}
+
+bool JumperSdkPlatformPlugin::ParseRuntimeRequest(
+    const flutter::MethodCall<flutter::EncodableValue>& method_call,
+    bool require_base_path,
+    RuntimeRequest* request,
+    std::string* error) {
+  if (method_call.arguments() == nullptr ||
+      !std::holds_alternative<flutter::EncodableMap>(*method_call.arguments())) {
+    if (error != nullptr) {
+      *error = "Missing arguments";
+    }
+    return false;
+  }
+  const auto& args = std::get<flutter::EncodableMap>(*method_call.arguments());
+  const auto get_string_arg = [&](const char* key) -> std::string {
+    const auto it = args.find(flutter::EncodableValue(key));
+    if (it != args.end() && std::holds_alternative<std::string>(it->second)) {
+      return std::get<std::string>(it->second);
+    }
+    return "";
+  };
+  request->version = get_string_arg("version");
+  request->platform_arch = get_string_arg("platformArch");
+  request->base_path = get_string_arg("basePath");
+  if (request->version.empty()) {
+    if (error != nullptr) {
+      *error = "Missing version";
+    }
+    return false;
+  }
+  if (request->platform_arch.empty()) {
+    if (error != nullptr) {
+      *error = "Missing platformArch";
+    }
+    return false;
+  }
+  if (require_base_path && request->base_path.empty()) {
+    if (error != nullptr) {
+      *error = "Missing basePath";
+    }
+    return false;
+  }
+  return true;
+}
+
+std::string JumperSdkPlatformPlugin::RuntimeContainerRoot() const {
+  PWSTR app_data = nullptr;
+  std::string root;
+  if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &app_data)) &&
+      app_data != nullptr) {
+    int size_needed =
+        WideCharToMultiByte(CP_UTF8, 0, app_data, -1, nullptr, 0, nullptr, nullptr);
+    if (size_needed > 0) {
+      std::vector<char> utf8(size_needed);
+      WideCharToMultiByte(CP_UTF8, 0, app_data, -1, utf8.data(), size_needed, nullptr, nullptr);
+      root = std::string(utf8.data()) + "\\jumper-runtime";
+    }
+  }
+  if (app_data != nullptr) {
+    CoTaskMemFree(app_data);
+  }
+  if (root.empty()) {
+    const char* profile = std::getenv("USERPROFILE");
+    if (profile != nullptr && std::string(profile).size() > 0) {
+      root = std::string(profile) + "\\AppData\\Roaming\\jumper-runtime";
+    } else {
+      root = ".\\jumper-runtime";
+    }
+  }
+  return root;
+}
+
+bool JumperSdkPlatformPlugin::EnsureDirectory(const std::string& path, std::string* error) const {
+  try {
+    std::filesystem::create_directories(std::filesystem::u8path(path));
+    return true;
+  } catch (const std::exception& ex) {
+    if (error != nullptr) {
+      *error = ex.what();
+    }
+    return false;
+  }
+}
+
+bool JumperSdkPlatformPlugin::CopyFileReplace(
+    const std::string& source,
+    const std::string& destination,
+    std::string* error) const {
+  try {
+    const auto source_path = std::filesystem::u8path(source);
+    const auto destination_path = std::filesystem::u8path(destination);
+    if (!std::filesystem::exists(source_path)) {
+      if (error != nullptr) {
+        *error = "Source file not found: " + source;
+      }
+      return false;
+    }
+    std::filesystem::create_directories(destination_path.parent_path());
+    if (std::filesystem::exists(destination_path)) {
+      std::filesystem::remove(destination_path);
+    }
+    std::filesystem::copy_file(source_path, destination_path);
+    return true;
+  } catch (const std::exception& ex) {
+    if (error != nullptr) {
+      *error = ex.what();
+    }
+    return false;
+  }
+}
+
+bool JumperSdkPlatformPlugin::WriteTextFile(
+    const std::string& path,
+    const std::string& value,
+    std::string* error) const {
+  std::ofstream output(path, std::ios::trunc);
+  if (!output.is_open()) {
+    if (error != nullptr) {
+      *error = "Unable to write file: " + path;
+    }
+    return false;
+  }
+  output << value;
+  if (!output.good()) {
+    if (error != nullptr) {
+      *error = "Failed writing file: " + path;
+    }
+    return false;
+  }
+  return true;
+}
+
+bool JumperSdkPlatformPlugin::FileExists(const std::string& path) const {
+  try {
+    return std::filesystem::exists(std::filesystem::u8path(path));
+  } catch (...) {
+    return false;
+  }
 }
 
 bool JumperSdkPlatformPlugin::StartRealCore(const LaunchOptions& options, std::string* error) {
@@ -281,17 +424,70 @@ void JumperSdkPlatformPlugin::HandleMethodCall(
     }
     result->Success(flutter::EncodableValue(state));
   } else if (method_call.method_name().compare("setupRuntime") == 0) {
+    RuntimeRequest request;
+    std::string parse_error;
+    if (!ParseRuntimeRequest(method_call, true, &request, &parse_error)) {
+      result->Error("SETUP_RUNTIME_FAILED", "Failed to setup runtime in container", parse_error);
+      return;
+    }
+    const std::string runtime_root = RuntimeContainerRoot();
+    const std::string source_binary =
+        request.base_path + "\\engine\\runtime-assets\\" + request.platform_arch +
+        "\\sing-box-" + request.version + "-" + request.platform_arch + "\\sing-box.exe";
+    const std::string source_config =
+        request.base_path + "\\engine\\runtime-assets\\" + request.platform_arch +
+        "\\minimal-config.json";
+    const std::string target_binary = runtime_root + "\\sing-box.exe";
+    const std::string target_config = runtime_root + "\\config.json";
+    const std::string target_version = runtime_root + "\\VERSION";
+
+    std::string io_error;
+    if (!EnsureDirectory(runtime_root, &io_error) ||
+        !CopyFileReplace(source_binary, target_binary, &io_error) ||
+        !CopyFileReplace(source_config, target_config, &io_error) ||
+        !WriteTextFile(target_version, request.version + "\n", &io_error)) {
+      result->Error("SETUP_RUNTIME_FAILED", "Failed to setup runtime in container", io_error);
+      return;
+    }
+
     flutter::EncodableMap payload;
-    payload[flutter::EncodableValue("installed")] = flutter::EncodableValue(false);
-    payload[flutter::EncodableValue("ready")] = flutter::EncodableValue(false);
-    payload[flutter::EncodableValue("platform")] = flutter::EncodableValue("windows");
+    payload[flutter::EncodableValue("installed")] = flutter::EncodableValue(true);
+    payload[flutter::EncodableValue("binaryPath")] = flutter::EncodableValue(target_binary);
+    payload[flutter::EncodableValue("configPath")] = flutter::EncodableValue(target_config);
+    payload[flutter::EncodableValue("runtimeRoot")] = flutter::EncodableValue(runtime_root);
     result->Success(flutter::EncodableValue(payload));
   } else if (method_call.method_name().compare("inspectRuntime") == 0) {
+    RuntimeRequest request;
+    std::string parse_error;
+    if (!ParseRuntimeRequest(method_call, false, &request, &parse_error)) {
+      result->Error("INSPECT_RUNTIME_FAILED", "Failed to inspect runtime", parse_error);
+      return;
+    }
+    const std::string runtime_root = RuntimeContainerRoot();
+    const std::string binary_path = runtime_root + "\\sing-box.exe";
+    const std::string config_path = runtime_root + "\\config.json";
+    const std::string version_path = runtime_root + "\\VERSION";
+    std::string runtime_version;
+    {
+      std::ifstream input(version_path);
+      if (input.is_open()) {
+        std::getline(input, runtime_version);
+      }
+    }
+    const bool binary_exists = FileExists(binary_path);
+    const bool config_exists = FileExists(config_path);
+    const bool version_matches = runtime_version == request.version;
+
     flutter::EncodableMap payload;
-    payload[flutter::EncodableValue("ready")] = flutter::EncodableValue(false);
-    payload[flutter::EncodableValue("binaryExists")] = flutter::EncodableValue(false);
-    payload[flutter::EncodableValue("configExists")] = flutter::EncodableValue(false);
-    payload[flutter::EncodableValue("platform")] = flutter::EncodableValue("windows");
+    payload[flutter::EncodableValue("ready")] =
+        flutter::EncodableValue(binary_exists && config_exists && version_matches);
+    payload[flutter::EncodableValue("binaryPath")] = flutter::EncodableValue(binary_path);
+    payload[flutter::EncodableValue("configPath")] = flutter::EncodableValue(config_path);
+    payload[flutter::EncodableValue("binaryExists")] = flutter::EncodableValue(binary_exists);
+    payload[flutter::EncodableValue("configExists")] = flutter::EncodableValue(config_exists);
+    payload[flutter::EncodableValue("runtimeVersion")] = flutter::EncodableValue(runtime_version);
+    payload[flutter::EncodableValue("expectedVersion")] = flutter::EncodableValue(request.version);
+    payload[flutter::EncodableValue("versionMatches")] = flutter::EncodableValue(version_matches);
     result->Success(flutter::EncodableValue(payload));
   } else if (method_call.method_name().compare("enableSystemProxy") == 0 ||
              method_call.method_name().compare("disableSystemProxy") == 0 ||

@@ -31,18 +31,38 @@ jobs:
       - name: Ensure scripts are executable
         run: |
           chmod +x engine/runtime-assets/fetch-sing-box.sh
+          chmod +x engine/runtime-assets/prepare-runtime-assets.sh
           chmod +x engine/runtime-assets/generate-checksums.sh
           chmod +x engine/runtime-assets/verify-checksums.sh
           chmod +x engine/runtime-assets/validate-runtime-chain.sh
 
-      - name: Fetch runtime asset
-        run: ./engine/runtime-assets/fetch-sing-box.sh "${{ matrix.platform_arch }}" 1.12.22
+      - name: Prepare runtime assets (latest)
+        run: ./engine/runtime-assets/prepare-runtime-assets.sh "${{ matrix.platform_arch }}" latest
 
-      - name: Verify checksums for platform
-        run: ./engine/runtime-assets/verify-checksums.sh "${{ matrix.platform_arch }}"
+      - name: Resolve prepared runtime version
+        id: resolved
+        run: |
+          RESOLVED_VERSION="$(python3 - <<'PY'
+import json
+from pathlib import Path
+data = json.loads(Path("engine/runtime-assets/resolved-runtime-lock.json").read_text())
+print(data["resolved_version"])
+PY
+)"
+          echo "version=${RESOLVED_VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Validate runtime chain
-        run: ./engine/runtime-assets/validate-runtime-chain.sh "${{ matrix.platform_arch }}" 1.12.22
+        run: ./engine/runtime-assets/validate-runtime-chain.sh "${{ matrix.platform_arch }}" "${{ steps.resolved.outputs.version }}"
+
+      - name: Runtime lock summary
+        shell: bash
+        run: |
+          {
+            echo "# Runtime Resolved Lock"
+            echo
+            echo "- platform_arch: \`${{ matrix.platform_arch }}\`"
+            echo "- resolved_version: \`${{ steps.resolved.outputs.version }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload runtime evidence
         uses: actions/upload-artifact@v4
@@ -50,5 +70,6 @@ jobs:
           name: runtime-evidence-${{ matrix.platform_arch }}
           path: |
             engine/runtime-assets/checksums.json
+            engine/runtime-assets/resolved-runtime-lock.json
             engine/runtime-assets/${{ matrix.platform_arch }}/runtime.log
             engine/runtime-assets/${{ matrix.platform_arch }}/proxies.json

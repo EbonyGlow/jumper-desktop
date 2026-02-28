@@ -3,7 +3,33 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLATFORM_ARCH="${1:-darwin-arm64}"
-VERSION="${2:-1.12.22}"
+VERSION_INPUT="${2:-1.12.22}"
+SING_BOX_REPO_API="${SING_BOX_REPO_API:-https://api.github.com/repos/SagerNet/sing-box}"
+
+resolve_latest_version() {
+  python3 - <<'PY' "${SING_BOX_REPO_API}" "${GITHUB_TOKEN:-}"
+import json
+import sys
+import urllib.request
+
+base_api = sys.argv[1].rstrip("/")
+token = sys.argv[2]
+url = base_api + "/releases/latest"
+request = urllib.request.Request(
+    url,
+    headers={
+        "Accept": "application/vnd.github+json",
+        **({"Authorization": f"Bearer {token}"} if token else {}),
+    },
+)
+with urllib.request.urlopen(request, timeout=20) as response:
+    payload = json.load(response)
+tag = payload.get("tag_name")
+if not isinstance(tag, str) or not tag.strip():
+    raise SystemExit("missing tag_name from GitHub latest release API")
+print(tag.removeprefix("v"))
+PY
+}
 
 case "$PLATFORM_ARCH" in
   darwin-arm64|darwin-amd64|linux-amd64|linux-arm64|windows-amd64)
@@ -14,6 +40,12 @@ case "$PLATFORM_ARCH" in
     exit 1
     ;;
 esac
+
+VERSION="${VERSION_INPUT}"
+if [[ "${VERSION_INPUT}" == "latest" ]]; then
+  echo "[runtime-assets] Resolving latest version from GitHub API"
+  VERSION="$(resolve_latest_version)"
+fi
 
 ARCHIVE_EXT="tar.gz"
 if [[ "${PLATFORM_ARCH}" == windows-* ]]; then
@@ -37,6 +69,7 @@ if [[ -f "${BINARY_PATH}" ]]; then
   if [[ "${PLATFORM_ARCH}" != windows-* ]]; then
     chmod +x "${BINARY_PATH}"
   fi
+  echo "[runtime-assets] Resolved version: ${VERSION}"
   echo "[runtime-assets] Ready: ${BINARY_PATH}"
   echo "[runtime-assets] Run check:"
   echo "  \"${BINARY_PATH}\" version"
@@ -65,6 +98,7 @@ if [[ "${PLATFORM_ARCH}" != windows-* ]]; then
   chmod +x "${BINARY_PATH}"
 fi
 
+echo "[runtime-assets] Resolved version: ${VERSION}"
 echo "[runtime-assets] Ready: ${BINARY_PATH}"
 echo "[runtime-assets] Run check:"
 echo "  \"${BINARY_PATH}\" version"

@@ -19,9 +19,11 @@ jobs:
           - os: ubuntu-22.04
             device: linux
             artifact_suffix: linux
+            platform_arch: linux-amd64
           - os: windows-2022
             device: windows
             artifact_suffix: windows
+            platform_arch: windows-amd64
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -40,6 +42,24 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev ninja-build
 
+      - name: Prepare runtime assets for target platform
+        shell: bash
+        run: |
+          chmod +x engine/runtime-assets/prepare-runtime-assets.sh
+          ./engine/runtime-assets/prepare-runtime-assets.sh "${{ matrix.platform_arch }}" latest
+
+      - name: Resolve runtime version
+        id: runtime
+        shell: bash
+        run: |
+          RUNTIME_VERSION="$(python3 - <<'PY'
+import json
+from pathlib import Path
+print(json.loads(Path('engine/runtime-assets/resolved-runtime-lock.json').read_text())['resolved_version'])
+PY
+)"
+          echo "version=${RUNTIME_VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: Flutter pub get (example)
         working-directory: flutter/packages/jumper_sdk_platform/example
         run: flutter pub get
@@ -50,6 +70,8 @@ jobs:
         run: |
           mkdir -p ../../../.artifacts/sdk-platform-native-${{ matrix.artifact_suffix }}
           xvfb-run -a flutter test integration_test/plugin_integration_test.dart -d linux \
+            --dart-define=JUMPER_WORKSPACE_BASE_PATH="${{ github.workspace }}" \
+            --dart-define=JUMPER_RUNTIME_VERSION="${{ steps.runtime.outputs.version }}" \
             2>&1 | tee ../../../.artifacts/sdk-platform-native-${{ matrix.artifact_suffix }}/native-evidence.log
 
       - name: Run integration test on Windows
@@ -58,7 +80,9 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path "..\..\..\.artifacts\sdk-platform-native-${{ matrix.artifact_suffix }}" | Out-Null
-          flutter test integration_test/plugin_integration_test.dart -d windows 2>&1 |
+          flutter test integration_test/plugin_integration_test.dart -d windows `
+            --dart-define=JUMPER_WORKSPACE_BASE_PATH="${{ github.workspace }}" `
+            --dart-define=JUMPER_RUNTIME_VERSION="${{ steps.runtime.outputs.version }}" 2>&1 |
             Tee-Object -FilePath "..\..\..\.artifacts\sdk-platform-native-${{ matrix.artifact_suffix }}\native-evidence.log"
 
       - name: Write evidence summary

@@ -3,6 +3,7 @@
 #include <flutter_linux/flutter_linux.h>
 #include <gtk/gtk.h>
 #include <signal.h>
+#include <sys/stat.h>
 #include <sys/utsname.h>
 
 #include <cstring>
@@ -122,6 +123,64 @@ static void jumper_sdk_platform_plugin_handle_method_call(
     g_clear_pointer(&self->last_working_directory, g_free);
     self->last_working_directory = working_dir == nullptr ? nullptr : g_strdup(working_dir);
     return TRUE;
+  };
+
+  auto parse_runtime_request =
+      [&](FlMethodCall* call, gboolean require_base_path, gchar** version, gchar** platform_arch,
+          gchar** base_path, GError** error) {
+        *version = nullptr;
+        *platform_arch = nullptr;
+        *base_path = nullptr;
+        FlValue* args = fl_method_call_get_args(call);
+        if (args == nullptr || fl_value_get_type(args) != FL_VALUE_TYPE_MAP) {
+          g_set_error(error, g_quark_from_static_string("jumper.runtime"), 1, "Missing arguments");
+          return FALSE;
+        }
+        FlValue* version_value = fl_value_lookup_string(args, "version");
+        FlValue* arch_value = fl_value_lookup_string(args, "platformArch");
+        FlValue* base_value = fl_value_lookup_string(args, "basePath");
+        if (version_value == nullptr || fl_value_get_type(version_value) != FL_VALUE_TYPE_STRING ||
+            strlen(fl_value_get_string(version_value)) == 0) {
+          g_set_error(error, g_quark_from_static_string("jumper.runtime"), 2, "Missing version");
+          return FALSE;
+        }
+        if (arch_value == nullptr || fl_value_get_type(arch_value) != FL_VALUE_TYPE_STRING ||
+            strlen(fl_value_get_string(arch_value)) == 0) {
+          g_set_error(
+              error, g_quark_from_static_string("jumper.runtime"), 3, "Missing platformArch");
+          return FALSE;
+        }
+        const gchar* base_text =
+            (base_value != nullptr && fl_value_get_type(base_value) == FL_VALUE_TYPE_STRING)
+                ? fl_value_get_string(base_value)
+                : "";
+        if (require_base_path && (base_text == nullptr || strlen(base_text) == 0)) {
+          g_set_error(error, g_quark_from_static_string("jumper.runtime"), 4, "Missing basePath");
+          return FALSE;
+        }
+        *version = g_strdup(fl_value_get_string(version_value));
+        *platform_arch = g_strdup(fl_value_get_string(arch_value));
+        *base_path = g_strdup(base_text == nullptr ? "" : base_text);
+        return TRUE;
+      };
+
+  auto runtime_container_root = [&]() -> gchar* {
+    const gchar* user_data = g_get_user_data_dir();
+    if (user_data != nullptr && strlen(user_data) > 0) {
+      return g_build_filename(user_data, "jumper-runtime", nullptr);
+    }
+    return g_build_filename(g_get_home_dir(), ".local", "share", "jumper-runtime", nullptr);
+  };
+
+  auto copy_file_replace = [&](const gchar* source, const gchar* destination, GError** error) {
+    gchar* bytes = nullptr;
+    gsize length = 0;
+    if (!g_file_get_contents(source, &bytes, &length, error)) {
+      return FALSE;
+    }
+    gboolean ok = g_file_set_contents(destination, bytes, static_cast<gssize>(length), error);
+    g_free(bytes);
+    return ok;
   };
 
   if (strcmp(method, "getPlatformVersion") == 0) {
@@ -263,18 +322,125 @@ static void jumper_sdk_platform_plugin_handle_method_call(
     }
     response = FL_METHOD_RESPONSE(fl_method_success_response_new(state));
   } else if (strcmp(method, "setupRuntime") == 0) {
+    gchar* version = nullptr;
+    gchar* platform_arch = nullptr;
+    gchar* base_path = nullptr;
+    GError* runtime_error = nullptr;
+    if (!parse_runtime_request(method_call, TRUE, &version, &platform_arch, &base_path, &runtime_error)) {
+      response = FL_METHOD_RESPONSE(fl_method_error_response_new(
+          "SETUP_RUNTIME_FAILED",
+          "Failed to setup runtime in container",
+          fl_value_new_string(runtime_error == nullptr ? "unknown" : runtime_error->message)));
+      if (runtime_error != nullptr) {
+        g_error_free(runtime_error);
+      }
+      g_free(version);
+      g_free(platform_arch);
+      g_free(base_path);
+      fl_method_call_respond(method_call, response, nullptr);
+      return;
+    }
+
+    g_autofree gchar* runtime_root = runtime_container_root();
+    if (g_mkdir_with_parents(runtime_root, 0755) != 0) {
+      response = FL_METHOD_RESPONSE(fl_method_error_response_new(
+          "SETUP_RUNTIME_FAILED",
+          "Failed to setup runtime in container",
+          fl_value_new_string("Unable to create runtime root")));
+      g_free(version);
+      g_free(platform_arch);
+      g_free(base_path);
+      fl_method_call_respond(method_call, response, nullptr);
+      return;
+    }
+
+    g_autofree gchar* source_binary = g_strdup_printf(
+        "%s/engine/runtime-assets/%s/sing-box-%s-%s/sing-box",
+        base_path, platform_arch, version, platform_arch);
+    g_autofree gchar* source_config = g_strdup_printf(
+        "%s/engine/runtime-assets/%s/minimal-config.json",
+        base_path, platform_arch);
+    g_autofree gchar* target_binary = g_build_filename(runtime_root, "sing-box", nullptr);
+    g_autofree gchar* target_config = g_build_filename(runtime_root, "config.json", nullptr);
+    g_autofree gchar* target_version = g_build_filename(runtime_root, "VERSION", nullptr);
+
+    if (!copy_file_replace(source_binary, target_binary, &runtime_error) ||
+        !copy_file_replace(source_config, target_config, &runtime_error) ||
+        !g_file_set_contents(target_version, version, -1, &runtime_error)) {
+      response = FL_METHOD_RESPONSE(fl_method_error_response_new(
+          "SETUP_RUNTIME_FAILED",
+          "Failed to setup runtime in container",
+          fl_value_new_string(runtime_error == nullptr ? "unknown" : runtime_error->message)));
+      if (runtime_error != nullptr) {
+        g_error_free(runtime_error);
+      }
+      g_free(version);
+      g_free(platform_arch);
+      g_free(base_path);
+      fl_method_call_respond(method_call, response, nullptr);
+      return;
+    }
+    chmod(target_binary, 0755);
+
     g_autoptr(FlValue) payload = fl_value_new_map();
-    fl_value_set_string_take(payload, "installed", fl_value_new_bool(FALSE));
-    fl_value_set_string_take(payload, "ready", fl_value_new_bool(FALSE));
-    fl_value_set_string_take(payload, "platform", fl_value_new_string("linux"));
+    fl_value_set_string_take(payload, "installed", fl_value_new_bool(TRUE));
+    fl_value_set_string_take(payload, "binaryPath", fl_value_new_string(target_binary));
+    fl_value_set_string_take(payload, "configPath", fl_value_new_string(target_config));
+    fl_value_set_string_take(payload, "runtimeRoot", fl_value_new_string(runtime_root));
     response = FL_METHOD_RESPONSE(fl_method_success_response_new(payload));
+    g_free(version);
+    g_free(platform_arch);
+    g_free(base_path);
   } else if (strcmp(method, "inspectRuntime") == 0) {
+    gchar* version = nullptr;
+    gchar* platform_arch = nullptr;
+    gchar* base_path = nullptr;
+    GError* runtime_error = nullptr;
+    if (!parse_runtime_request(method_call, FALSE, &version, &platform_arch, &base_path, &runtime_error)) {
+      response = FL_METHOD_RESPONSE(fl_method_error_response_new(
+          "INSPECT_RUNTIME_FAILED",
+          "Failed to inspect runtime",
+          fl_value_new_string(runtime_error == nullptr ? "unknown" : runtime_error->message)));
+      if (runtime_error != nullptr) {
+        g_error_free(runtime_error);
+      }
+      g_free(version);
+      g_free(platform_arch);
+      g_free(base_path);
+      fl_method_call_respond(method_call, response, nullptr);
+      return;
+    }
+
+    g_autofree gchar* runtime_root = runtime_container_root();
+    g_autofree gchar* binary_path = g_build_filename(runtime_root, "sing-box", nullptr);
+    g_autofree gchar* config_path = g_build_filename(runtime_root, "config.json", nullptr);
+    g_autofree gchar* version_path = g_build_filename(runtime_root, "VERSION", nullptr);
+    gboolean binary_exists = g_file_test(binary_path, G_FILE_TEST_EXISTS);
+    gboolean config_exists = g_file_test(config_path, G_FILE_TEST_EXISTS);
+    gchar* runtime_version = nullptr;
+    gsize runtime_version_len = 0;
+    if (!g_file_get_contents(version_path, &runtime_version, &runtime_version_len, nullptr)) {
+      runtime_version = g_strdup("");
+    }
+    gchar* runtime_version_trimmed = g_strstrip(runtime_version);
+    gboolean version_matches = g_strcmp0(runtime_version_trimmed, version) == 0;
+
     g_autoptr(FlValue) payload = fl_value_new_map();
-    fl_value_set_string_take(payload, "ready", fl_value_new_bool(FALSE));
-    fl_value_set_string_take(payload, "binaryExists", fl_value_new_bool(FALSE));
-    fl_value_set_string_take(payload, "configExists", fl_value_new_bool(FALSE));
-    fl_value_set_string_take(payload, "platform", fl_value_new_string("linux"));
+    fl_value_set_string_take(
+        payload, "ready", fl_value_new_bool(binary_exists && config_exists && version_matches));
+    fl_value_set_string_take(payload, "binaryPath", fl_value_new_string(binary_path));
+    fl_value_set_string_take(payload, "configPath", fl_value_new_string(config_path));
+    fl_value_set_string_take(payload, "binaryExists", fl_value_new_bool(binary_exists));
+    fl_value_set_string_take(payload, "configExists", fl_value_new_bool(config_exists));
+    fl_value_set_string_take(
+        payload, "runtimeVersion", fl_value_new_string(runtime_version_trimmed == nullptr ? "" : runtime_version_trimmed));
+    fl_value_set_string_take(payload, "expectedVersion", fl_value_new_string(version));
+    fl_value_set_string_take(payload, "versionMatches", fl_value_new_bool(version_matches));
     response = FL_METHOD_RESPONSE(fl_method_success_response_new(payload));
+    g_free(runtime_version);
+    g_free(version);
+    g_free(platform_arch);
+    g_free(base_path);
   } else if (strcmp(method, "enableSystemProxy") == 0 ||
              strcmp(method, "disableSystemProxy") == 0 ||
              strcmp(method, "requestNotificationPermission") == 0 ||

@@ -35,10 +35,25 @@ class JumperSdkPlatformPlugin : public flutter::Plugin {
     std::vector<std::string> arguments;
     std::string working_directory;
   };
+  struct RuntimeRequest {
+    std::string version;
+    std::string platform_arch;
+    std::string base_path;
+  };
 
   bool StartRealCore(const LaunchOptions& options, std::string* error);
   void StopRealCore();
   bool ParseLaunchOptions(const flutter::EncodableMap& args, LaunchOptions* options);
+  bool ParseRuntimeRequest(
+      const flutter::MethodCall<flutter::EncodableValue>& method_call,
+      bool require_base_path,
+      RuntimeRequest* request,
+      std::string* error);
+  std::string RuntimeContainerRoot() const;
+  bool EnsureDirectory(const std::string& path, std::string* error) const;
+  bool CopyFileReplace(const std::string& source, const std::string& destination, std::string* error) const;
+  bool WriteTextFile(const std::string& path, const std::string& value, std::string* error) const;
+  bool FileExists(const std::string& path) const;
 
   bool is_running_ = false;
   int64_t pid_ = 0;

@@ -68,6 +68,7 @@ fvm flutter run -d macos \
 - `manifest.json`：当前纳入版本与下载链接
 - `checksums.json`：runtime 资产校验值（由脚本生成）
 - `fetch-sing-box.sh`：按平台下载并解压 sing-box
+- `prepare-runtime-assets.sh`：构建前拉取版本（支持 `latest`）、刷新 manifest、更新并验签 checksums、产出版本锁定文件
 - `validate-runtime-chain.sh`：执行 `start -> proxies API -> stop` 验证
 - `generate-checksums.sh`：生成/更新资产 SHA256
 - `verify-checksums.sh`：按 `checksums.json` 验签
@@ -81,10 +82,19 @@ fvm flutter run -d macos \
 
 ```bash
 cd /Users/sean/Desktop/cyber/jumper-desktop
-./engine/runtime-assets/fetch-sing-box.sh darwin-arm64 1.12.22
-./engine/runtime-assets/verify-checksums.sh
-./engine/runtime-assets/validate-runtime-chain.sh darwin-arm64 1.12.22
-./run-runtime-update.sh darwin-arm64 1.12.22 com.example.sdkSmokeApp
+./engine/runtime-assets/prepare-runtime-assets.sh darwin-arm64 latest
+./engine/runtime-assets/validate-runtime-chain.sh darwin-arm64 "$(python3 - <<'PY'
+import json
+from pathlib import Path
+print(json.loads(Path('engine/runtime-assets/resolved-runtime-lock.json').read_text())['resolved_version'])
+PY
+)"
+./run-runtime-update.sh darwin-arm64 "$(python3 - <<'PY'
+import json
+from pathlib import Path
+print(json.loads(Path('engine/runtime-assets/resolved-runtime-lock.json').read_text())['resolved_version'])
+PY
+)" com.example.sdkSmokeApp
 ```
 
 发布前全量路径（门禁全跑）：
@@ -92,9 +102,13 @@ cd /Users/sean/Desktop/cyber/jumper-desktop
 ```bash
 cd /Users/sean/Desktop/cyber/jumper-desktop
 ./audit-baseline-guard.sh
-./engine/runtime-assets/verify-checksums.sh
-./run-runtime-release-check.sh darwin-arm64 1.12.22 com.example.sdkSmokeApp
-./run-runtime-stability-check.sh darwin-arm64 1.12.22 1800 5
+./run-runtime-release-check.sh darwin-arm64 latest com.example.sdkSmokeApp
+./run-runtime-stability-check.sh darwin-arm64 "$(python3 - <<'PY'
+import json
+from pathlib import Path
+print(json.loads(Path('engine/runtime-assets/resolved-runtime-lock.json').read_text())['resolved_version'])
+PY
+)" 1800 5
 ```
 
 受信任发布工位（仅在需要更新 checksums 时执行）：

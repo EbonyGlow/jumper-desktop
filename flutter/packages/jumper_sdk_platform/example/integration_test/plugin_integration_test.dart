@@ -5,6 +5,15 @@ import 'package:integration_test/integration_test.dart';
 
 import 'package:jumper_sdk_platform/jumper_sdk_platform.dart';
 
+const _workspaceBasePath = String.fromEnvironment(
+  'JUMPER_WORKSPACE_BASE_PATH',
+  defaultValue: '',
+);
+const _runtimeVersion = String.fromEnvironment(
+  'JUMPER_RUNTIME_VERSION',
+  defaultValue: '1.12.22',
+);
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -54,5 +63,35 @@ void main() {
 
     final stopped = await plugin.getCoreState();
     expect(stopped['status'], 'stopped');
+  });
+
+  testWidgets('setupRuntime and inspectRuntime are available on native plugins', (
+    WidgetTester tester,
+  ) async {
+    if (!Platform.isLinux && !Platform.isWindows) {
+      return;
+    }
+    if (_workspaceBasePath.isEmpty) {
+      fail('JUMPER_WORKSPACE_BASE_PATH is required');
+    }
+
+    final plugin = JumperSdkPlatform();
+    final platformArch = Platform.isWindows ? 'windows-amd64' : 'linux-amd64';
+    final setup = await plugin.setupRuntime(
+      version: _runtimeVersion,
+      platformArch: platformArch,
+      basePath: _workspaceBasePath,
+    );
+    expect(setup['installed'], true);
+
+    final inspect = await plugin.inspectRuntime(
+      version: _runtimeVersion,
+      platformArch: platformArch,
+      basePath: _workspaceBasePath,
+    );
+    expect(inspect['ready'], true);
+    expect(inspect['binaryExists'], true);
+    expect(inspect['configExists'], true);
+    expect(inspect['versionMatches'], true);
   });
 }

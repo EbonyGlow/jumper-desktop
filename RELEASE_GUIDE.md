@@ -24,17 +24,22 @@ cd ../jumper_sdk_platform && fvm flutter analyze && fvm flutter test
 cd ../../apps/sdk_smoke_app && fvm flutter analyze && fvm flutter test
 cd ../../..
 
-# 2) 多平台 runtime 验签
-./engine/runtime-assets/verify-checksums.sh
+# 2) 构建前准备目标架构 runtime（latest + 锁定证据）
+./engine/runtime-assets/prepare-runtime-assets.sh darwin-arm64 latest
 
 # 3) macOS runtime 链路（发布前强校验）
-./run-runtime-release-check.sh darwin-arm64 1.12.22 com.example.sdkSmokeApp
+./run-runtime-release-check.sh darwin-arm64 latest com.example.sdkSmokeApp
 
 # 4) 稳定性门禁（30分钟）
-./run-runtime-stability-check.sh darwin-arm64 1.12.22 1800 5
+./run-runtime-stability-check.sh darwin-arm64 "$(python3 - <<'PY'
+import json
+from pathlib import Path
+print(json.loads(Path('engine/runtime-assets/resolved-runtime-lock.json').read_text())['resolved_version'])
+PY
+)" 1800 5
 ```
 
-说明：`generate-checksums.sh` 仅用于受信任发布工位“产出并更新”校验文件，不属于验收流水线。
+说明：`prepare-runtime-assets.sh` 会在构建前更新目标架构资产并生成 `resolved-runtime-lock.json`。`generate-checksums.sh` 仅用于受信任发布工位的手动维护，不属于消费侧验收流水线。
 
 如需在受信任工位更新 checksums，使用：
 
