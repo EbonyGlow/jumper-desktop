@@ -6,6 +6,7 @@ on:
     paths:
       - "flutter/packages/jumper_sdk_platform/windows/**"
       - "flutter/packages/jumper_sdk_platform/linux/**"
+      - "flutter/packages/jumper_sdk_platform/macos/**"
       - "flutter/packages/jumper_sdk_platform/lib/**"
       - "flutter/packages/jumper_sdk_platform/example/integration_test/**"
       - ".github/workflows/sdk-platform-native-evidence.yml"
@@ -16,6 +17,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - os: macos-14
+            device: macos
+            artifact_suffix: macos
+            platform_arch: darwin-arm64
           - os: ubuntu-22.04
             device: linux
             artifact_suffix: linux
@@ -70,6 +75,16 @@ jobs:
         run: |
           mkdir -p ../../../.artifacts/sdk-platform-native-${{ matrix.artifact_suffix }}
           xvfb-run -a flutter test integration_test/plugin_integration_test.dart -d linux \
+            --dart-define=JUMPER_WORKSPACE_BASE_PATH="${{ github.workspace }}" \
+            --dart-define=JUMPER_RUNTIME_VERSION="${{ steps.runtime.outputs.version }}" \
+            2>&1 | tee ../../../.artifacts/sdk-platform-native-${{ matrix.artifact_suffix }}/native-evidence.log
+
+      - name: Run integration test on macOS
+        if: runner.os == 'macOS'
+        working-directory: flutter/packages/jumper_sdk_platform/example
+        run: |
+          mkdir -p ../../../.artifacts/sdk-platform-native-${{ matrix.artifact_suffix }}
+          flutter test integration_test/plugin_integration_test.dart -d macos \
             --dart-define=JUMPER_WORKSPACE_BASE_PATH="${{ github.workspace }}" \
             --dart-define=JUMPER_RUNTIME_VERSION="${{ steps.runtime.outputs.version }}" \
             2>&1 | tee ../../../.artifacts/sdk-platform-native-${{ matrix.artifact_suffix }}/native-evidence.log
