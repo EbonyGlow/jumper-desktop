@@ -1,3 +1,11 @@
 
 # FVM Version Cache
 .fvm/
+
+# Local runtime prepare outputs
+engine/runtime-assets/resolved-runtime-lock.json
+engine/runtime-assets/darwin-arm64/sing-box-1.12.23-darwin-arm64.tar.gz
+engine/runtime-assets/darwin-arm64/sing-box-1.12.23-darwin-arm64/
+
+# macOS example local pod artifacts
+flutter/packages/jumper_sdk_platform/example/macos/Podfile.lock
