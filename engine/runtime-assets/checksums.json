@@ -13,49 +13,49 @@
       }
     },
     "darwin-amd64": {
-      "version": "1.12.22",
+      "version": "1.13.0",
       "archive": {
-        "path": "darwin-amd64/sing-box-1.12.22-darwin-amd64.tar.gz",
-        "sha256": "950072cf2f1e0d4aa216116e0b1f9f7542aa953c1487b55516ea9d04bd73bbc6"
+        "path": "darwin-amd64/sing-box-1.13.0-darwin-amd64.tar.gz",
+        "sha256": "fbbe71f841e8355f0bcda334f6692ae82c2ddf1c454e4e2896aa17447fbd3b97"
       },
       "binary": {
-        "path": "darwin-amd64/sing-box-1.12.22-darwin-amd64/sing-box",
-        "sha256": "80eea164fac7ce6e961f7d406de92642e96be88534cf9395fa2b77f33dd6b6ac"
+        "path": "darwin-amd64/sing-box-1.13.0-darwin-amd64/sing-box",
+        "sha256": "9bf180d4f7cb2eb9b1d9249ba575a537d05a9b3d8e99116fea42ce2bb06a624a"
       }
     },
     "linux-amd64": {
-      "version": "1.12.22",
+      "version": "1.13.0",
       "archive": {
-        "path": "linux-amd64/sing-box-1.12.22-linux-amd64.tar.gz",
-        "sha256": "50a70a1b71064a7d8ef63737fbef2aa36c991d8dc1c54598b9513c2a15e25e9f"
+        "path": "linux-amd64/sing-box-1.13.0-linux-amd64.tar.gz",
+        "sha256": "86db0f9df3f822ca2adccde2f7c1c9e21d64e646a77bf258274fde3be399025b"
       },
       "binary": {
-        "path": "linux-amd64/sing-box-1.12.22-linux-amd64/sing-box",
-        "sha256": "56a89bc2dd84023e39cdedc03413fcad55e3a42460681e66948cf5a2c07655dd"
+        "path": "linux-amd64/sing-box-1.13.0-linux-amd64/sing-box",
+        "sha256": "f20a31d8c6071cf6fd88f568a359295422a4469831b733efe82cb69859ec336d"
       }
     },
     "linux-arm64": {
-      "version": "1.12.22",
+      "version": "1.13.0",
       "archive": {
-        "path": "linux-arm64/sing-box-1.12.22-linux-arm64.tar.gz",
-        "sha256": "95a9c143e6488584868fc5c03d809c88519c6af0d4ca4cb1fa8a49cc397ae992"
+        "path": "linux-arm64/sing-box-1.13.0-linux-arm64.tar.gz",
+        "sha256": "57efdb8a256ae0736fa00aee5538c384ee50b40882075d2d1a05a1c3d7c4a889"
       },
       "binary": {
-        "path": "linux-arm64/sing-box-1.12.22-linux-arm64/sing-box",
-        "sha256": "202e69143ba2d106c0f05f01daa08be237ecea004557ae2bbd61661175a5ac1d"
+        "path": "linux-arm64/sing-box-1.13.0-linux-arm64/sing-box",
+        "sha256": "6c46814fecc11d3574a218eb5b44b9fdc9858d146ee12ec85b9b9e2ad22f153b"
       }
     },
     "windows-amd64": {
-      "version": "1.12.22",
+      "version": "1.13.0",
       "archive": {
-        "path": "windows-amd64/sing-box-1.12.22-windows-amd64.zip",
-        "sha256": "3c0f046e163ecb32ec2757f693daae1f4f138547535f6cc5d6a4bd9a7a086175"
+        "path": "windows-amd64/sing-box-1.13.0-windows-amd64.zip",
+        "sha256": "c080ac4f53f1e92fe44a5440958bfe6ff6a3db75347fe6b31afc6d6517a8d76e"
       },
       "binary": {
-        "path": "windows-amd64/sing-box-1.12.22-windows-amd64/sing-box.exe",
-        "sha256": "6d35e8635c7956f69cdd63abfcdaee1ce6937f176a34458f05c7b0ae0ce6d926"
+        "path": "windows-amd64/sing-box-1.13.0-windows-amd64/sing-box.exe",
+        "sha256": "f50c970f321e5942191933ae02c81673127f1564178f4ae70ed763278a061ee2"
       }
     }
   },
-  "generated_at_utc": "2026-02-28T07:27:28Z"
+  "generated_at_utc": "2026-03-02T09:57:33Z"
 }
