@@ -23,6 +23,11 @@ abstract interface class CoreApiClient {
   Future<void> setConfigs(CoreConfigs configs);
   Future<ProxiesSnapshot> getProxies();
   Future<void> useProxy({required String group, required String proxy});
+  Future<Map<String, int>> testGroupDelay({
+    required String group,
+    required String url,
+    int timeoutMs,
+  });
   Future<ConnectionsSnapshot> getConnections();
   Future<void> closeConnection({required String id});
   Future<void> closeAllConnections();

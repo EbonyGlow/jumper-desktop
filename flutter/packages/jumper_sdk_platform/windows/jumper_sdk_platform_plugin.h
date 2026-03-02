@@ -43,6 +43,7 @@ class JumperSdkPlatformPlugin : public flutter::Plugin {
 
   bool StartRealCore(const LaunchOptions& options, std::string* error);
   void StopRealCore();
+  bool IsTunnelEnabledInLaunchConfig(const std::vector<std::string>& arguments) const;
   bool ParseLaunchOptions(const flutter::EncodableMap& args, LaunchOptions* options);
   bool ParseRuntimeRequest(
       const flutter::MethodCall<flutter::EncodableValue>& method_call,

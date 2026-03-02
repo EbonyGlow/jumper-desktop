@@ -22,7 +22,7 @@ class JumperSdkClient
     JumperRuntimeLaunchOptions? runtimeLaunchOptions,
     SdkCapabilitiesConfig capabilities = const SdkCapabilitiesConfig(),
   }) : _platform = platform ?? JumperSdkPlatform(),
-       _coreApiBaseUri = coreApiBaseUri ?? Uri.parse('http://127.0.0.1:20123'),
+       _coreApiBaseUri = coreApiBaseUri ?? Uri.parse('http://127.0.0.1:19900'),
        _coreApiSecret = coreApiSecret,
        _runtimeLaunchOptions = runtimeLaunchOptions,
        _capabilities = capabilities;
@@ -133,6 +133,26 @@ class JumperSdkClient
       path: '/proxies/$group',
       body: <String, Object?>{'name': proxy},
     );
+  }
+
+  @override
+  Future<Map<String, int>> testGroupDelay({
+    required String group,
+    required String url,
+    int timeoutMs = 5000,
+  }) async {
+    final encodedGroup = Uri.encodeComponent(group);
+    final payload = await _requestJson(
+      method: 'GET',
+      path: '/proxies/$encodedGroup/delay?url=${Uri.encodeComponent(url)}&timeout=$timeoutMs',
+    );
+    final results = <String, int>{};
+    payload.forEach((key, value) {
+      if (value is int) {
+        results[key.toString()] = value;
+      }
+    });
+    return results;
   }
 
   @override
