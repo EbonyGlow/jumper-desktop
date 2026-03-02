@@ -76,7 +76,8 @@ class JumperSdkClient
         level: (event['level'] as String?) ?? 'info',
         message: (event['message'] as String?) ?? '',
         timestampMs:
-            (event['timestampMs'] as int?) ?? DateTime.now().millisecondsSinceEpoch,
+            (event['timestampMs'] as int?) ??
+            DateTime.now().millisecondsSinceEpoch,
       );
     });
   }
@@ -144,7 +145,8 @@ class JumperSdkClient
     final encodedGroup = Uri.encodeComponent(group);
     final payload = await _requestJson(
       method: 'GET',
-      path: '/proxies/$encodedGroup/delay?url=${Uri.encodeComponent(url)}&timeout=$timeoutMs',
+      path:
+          '/proxies/$encodedGroup/delay?url=${Uri.encodeComponent(url)}&timeout=$timeoutMs',
     );
     final results = <String, int>{};
     payload.forEach((key, value) {
@@ -246,10 +248,7 @@ class JumperSdkClient
   }
 
   @override
-  Future<void> sendNotification({
-    required String title,
-    required String body,
-  }) {
+  Future<void> sendNotification({required String title, required String body}) {
     _ensureCapability(
       enabled: _capabilities.allowNotifyCapability,
       code: 'SDK-CAPABILITY-NOTIFY-DISABLED',
@@ -259,10 +258,7 @@ class JumperSdkClient
   }
 
   @override
-  Future<void> showTray({
-    required String title,
-    String? tooltip,
-  }) {
+  Future<void> showTray({required String title, String? tooltip}) {
     _ensureCapability(
       enabled: _capabilities.allowTrayCapability,
       code: 'SDK-CAPABILITY-TRAY-DISABLED',
@@ -272,10 +268,7 @@ class JumperSdkClient
   }
 
   @override
-  Future<void> updateTray({
-    required String title,
-    String? tooltip,
-  }) {
+  Future<void> updateTray({required String title, String? tooltip}) {
     _ensureCapability(
       enabled: _capabilities.allowTrayCapability,
       code: 'SDK-CAPABILITY-TRAY-DISABLED',
@@ -306,28 +299,28 @@ class JumperSdkClient
   }
 
   @override
-  Future<void> enableTunnel({
-    String stack = 'mixed',
-    String? device,
-  }) async {
+  Future<void> enableTunnel({String stack = 'mixed', String? device}) async {
     _ensureCapability(
       enabled: _capabilities.allowTunnelCapability,
       code: 'SDK-CAPABILITY-TUNNEL-DISABLED',
       message: 'Tunnel capability is disabled by SDK configuration',
     );
-    final tunPatch = <String, Object?>{
-      'enable': true,
-      'stack': stack,
-    };
-    if (device != null) {
-      tunPatch['device'] = device;
+    if (await _applyTunnelToLaunchConfig(
+      enabled: true,
+      stack: stack,
+      device: device,
+    )) {
+      await restartCore(reason: 'tunnel_enabled');
+      return;
     }
+
+    // Fallback for SDK consumers that rely on the old /configs patch API.
+    final tunPatch = <String, Object?>{'enable': true, 'stack': stack};
+    if (device != null) tunPatch['device'] = device;
     await _requestJson(
       method: 'PATCH',
       path: '/configs',
-      body: <String, Object?>{
-        'tun': tunPatch,
-      },
+      body: <String, Object?>{'tun': tunPatch},
     );
   }
 
@@ -338,13 +331,17 @@ class JumperSdkClient
       code: 'SDK-CAPABILITY-TUNNEL-DISABLED',
       message: 'Tunnel capability is disabled by SDK configuration',
     );
+    if (await _applyTunnelToLaunchConfig(enabled: false)) {
+      await restartCore(reason: 'tunnel_disabled');
+      return;
+    }
+
+    // Fallback for SDK consumers that rely on the old /configs patch API.
     await _requestJson(
       method: 'PATCH',
       path: '/configs',
       body: const <String, Object?>{
-        'tun': <String, Object?>{
-          'enable': false,
-        },
+        'tun': <String, Object?>{'enable': false},
       },
     );
   }
@@ -366,6 +363,12 @@ class JumperSdkClient
       code: 'SDK-CAPABILITY-TUNNEL-DISABLED',
       message: 'Tunnel capability is disabled by SDK configuration',
     );
+    final fromLaunchConfig = await _readTunnelStatusFromLaunchConfig();
+    if (fromLaunchConfig != null) {
+      return fromLaunchConfig;
+    }
+
+    // Fallback for SDK consumers that rely on the old /configs API.
     final payload = await _requestJson(method: 'GET', path: '/configs');
     final tun = payload['tun'];
     if (tun is Map) {
@@ -391,9 +394,7 @@ class JumperSdkClient
       base['networkMode'] = _capabilities.networkMode.name;
       return base;
     }
-    return <String, Object?>{
-      'networkMode': _capabilities.networkMode.name,
-    };
+    return <String, Object?>{'networkMode': _capabilities.networkMode.name};
   }
 
   void _ensureCapability({
@@ -433,11 +434,15 @@ class JumperSdkClient
   }) async {
     final client = HttpClient();
     try {
-      final requestUri = _coreApiBaseUri.resolve(path);
+      final endpoint = await _resolveCoreApiEndpoint();
+      final requestUri = endpoint.baseUri.resolve(path);
       final request = await client.openUrl(method, requestUri);
       request.headers.contentType = ContentType.json;
-      if (_coreApiSecret != null && _coreApiSecret.isNotEmpty) {
-        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $_coreApiSecret');
+      if (endpoint.secret != null && endpoint.secret!.isNotEmpty) {
+        request.headers.set(
+          HttpHeaders.authorizationHeader,
+          'Bearer ${endpoint.secret}',
+        );
       }
       if (body != null) {
         request.write(jsonEncode(body));
@@ -475,4 +480,164 @@ class JumperSdkClient
       client.close(force: true);
     }
   }
+
+  Future<_ResolvedCoreApiEndpoint> _resolveCoreApiEndpoint() async {
+    final launchConfigPath = _resolveLaunchConfigPath();
+    if (launchConfigPath != null) {
+      try {
+        final file = File(launchConfigPath);
+        if (file.existsSync()) {
+          final decoded = jsonDecode(await file.readAsString());
+          if (decoded is Map) {
+            final config = decoded.cast<String, Object?>();
+            final experimental = config['experimental'];
+            if (experimental is Map) {
+              final expMap = experimental.cast<String, Object?>();
+              final clashApi = expMap['clash_api'];
+              if (clashApi is Map) {
+                final clashMap = clashApi.cast<String, Object?>();
+                final controller = clashMap['external_controller']
+                    ?.toString()
+                    .trim();
+                final secret = clashMap['secret']?.toString();
+                final uri = _parseControllerUri(controller);
+                if (uri != null) {
+                  return _ResolvedCoreApiEndpoint(
+                    baseUri: uri,
+                    secret: (secret?.isEmpty ?? true) ? _coreApiSecret : secret,
+                  );
+                }
+              }
+            }
+          }
+        }
+      } catch (_) {
+        // Keep fallback endpoint if config parsing fails.
+      }
+    }
+    return _ResolvedCoreApiEndpoint(
+      baseUri: _coreApiBaseUri,
+      secret: _coreApiSecret,
+    );
+  }
+
+  Uri? _parseControllerUri(String? controller) {
+    if (controller == null || controller.isEmpty) {
+      return null;
+    }
+    final normalized = controller.contains('://')
+        ? controller
+        : 'http://$controller';
+    return Uri.tryParse(normalized);
+  }
+
+  String? _resolveLaunchConfigPath() {
+    final options = _runtimeLaunchOptions;
+    if (options == null) return null;
+    final args = options.arguments;
+    for (var i = 0; i < args.length - 1; i++) {
+      if (args[i] == '-c' && args[i + 1].trim().isNotEmpty) {
+        return args[i + 1].trim();
+      }
+    }
+    return null;
+  }
+
+  Future<bool> _applyTunnelToLaunchConfig({
+    required bool enabled,
+    String stack = 'mixed',
+    String? device,
+  }) async {
+    final configPath = _resolveLaunchConfigPath();
+    if (configPath == null) {
+      return false;
+    }
+    final file = File(configPath);
+    if (!file.existsSync()) {
+      return false;
+    }
+
+    final decoded = jsonDecode(await file.readAsString());
+    if (decoded is! Map) {
+      return false;
+    }
+    final config = decoded.cast<String, Object?>();
+    final inboundsRaw = config['inbounds'];
+    final inbounds = <Map<String, Object?>>[];
+    if (inboundsRaw is List) {
+      for (final item in inboundsRaw) {
+        if (item is Map) {
+          inbounds.add(item.cast<String, Object?>());
+        }
+      }
+    }
+
+    Map<String, Object?>? tunInbound;
+    for (final inbound in inbounds) {
+      if ((inbound['type'] as String?)?.toLowerCase() == 'tun') {
+        tunInbound = inbound;
+        break;
+      }
+    }
+    tunInbound ??= <String, Object?>{
+      'type': 'tun',
+      'tag': 'tun-in',
+      'address': <String>['172.18.0.1/30', 'fdfe:dcba:9876::1/126'],
+      'auto_route': true,
+      'strict_route': true,
+    };
+    tunInbound['enable'] = enabled;
+    tunInbound['stack'] = stack;
+    if (device != null && device.isNotEmpty) {
+      tunInbound['interface_name'] = device;
+    }
+    if (!inbounds.contains(tunInbound)) {
+      inbounds.insert(0, tunInbound);
+    }
+    config['inbounds'] = inbounds;
+    await file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(config),
+    );
+    return true;
+  }
+
+  Future<TunnelStatus?> _readTunnelStatusFromLaunchConfig() async {
+    final configPath = _resolveLaunchConfigPath();
+    if (configPath == null) {
+      return null;
+    }
+    final file = File(configPath);
+    if (!file.existsSync()) {
+      return null;
+    }
+    final decoded = jsonDecode(await file.readAsString());
+    if (decoded is! Map) {
+      return null;
+    }
+    final config = decoded.cast<String, Object?>();
+    final inbounds = config['inbounds'];
+    if (inbounds is! List) {
+      return const TunnelStatus(enabled: false);
+    }
+    for (final item in inbounds) {
+      if (item is! Map) continue;
+      final inbound = item.cast<String, Object?>();
+      if ((inbound['type'] as String?)?.toLowerCase() != 'tun') continue;
+      return TunnelStatus(
+        enabled: (inbound['enable'] as bool?) ?? true,
+        stack: inbound['stack'] as String?,
+        device:
+            (inbound['interface_name'] as String?) ??
+            (inbound['device'] as String?),
+      );
+    }
+    return const TunnelStatus(enabled: false);
+  }
+}
+
+class _ResolvedCoreApiEndpoint {
+  const _ResolvedCoreApiEndpoint({required this.baseUri, required this.secret});
+
+  final Uri baseUri;
+  final String? secret;
 }
