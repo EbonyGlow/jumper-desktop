@@ -7,7 +7,7 @@ import 'package:jumper_sdk/jumper_sdk.dart';
 const _coreBinaryPath = String.fromEnvironment('JUMPER_CORE_BIN', defaultValue: '');
 const _coreArguments = String.fromEnvironment('JUMPER_CORE_ARGS', defaultValue: '');
 const _coreWorkingDirectory = String.fromEnvironment('JUMPER_CORE_WORKDIR', defaultValue: '');
-const _coreApiBase = String.fromEnvironment('JUMPER_CORE_API_BASE', defaultValue: 'http://127.0.0.1:20123');
+const _coreApiBase = String.fromEnvironment('JUMPER_CORE_API_BASE', defaultValue: 'http://127.0.0.1:19900');
 const _coreConfigPath = String.fromEnvironment('JUMPER_CORE_CONFIG_PATH', defaultValue: '');
 const _skipStart = String.fromEnvironment('JUMPER_SKIP_START', defaultValue: 'false') == 'true';
 const _assumeBinAccessible =

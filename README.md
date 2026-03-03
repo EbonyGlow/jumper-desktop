@@ -24,7 +24,7 @@
 - `M3_GATE_EVIDENCE.md`：三平台 M3-GATE 证据清单。
 - `verify-m3-gate-evidence.sh`：对三平台 artifacts 做一键门禁核对。
 - `audit-baseline-guard.sh`：审计基线回退保护脚本（规则扫描）。
-- `.fvmrc`：Flutter 版本固定为 `3.41.2`。
+- `.fvmrc`：Flutter 版本固定为 `3.41.3`。
 
 ## 执行原则
 
@@ -42,7 +42,7 @@ fvm flutter run -d macos \
   --dart-define=JUMPER_CORE_BIN=/absolute/path/to/sing-box \
   --dart-define=JUMPER_CORE_ARGS='run --disable-color -c /absolute/path/to/config.json -D /absolute/path/to/workdir' \
   --dart-define=JUMPER_CORE_WORKDIR=/absolute/path/to/workdir \
-  --dart-define=JUMPER_CORE_API_BASE=http://127.0.0.1:20123 \
+  --dart-define=JUMPER_CORE_API_BASE=http://127.0.0.1:19900 \
   --dart-define=JUMPER_CORE_API_SECRET=
 ```
 
@@ -54,7 +54,7 @@ fvm flutter run -d macos \
   --dart-define=JUMPER_APP_BASE_PATH=/absolute/path/to/app-base \
   --dart-define=JUMPER_CORE_BASE_PATH=data/sing-box \
   --dart-define=JUMPER_CORE_CONFIG_JSON='{"log":{"level":"info"}}' \
-  --dart-define=JUMPER_CORE_API_BASE=http://127.0.0.1:20123
+  --dart-define=JUMPER_CORE_API_BASE=http://127.0.0.1:19900
 ```
 
 说明：
@@ -150,7 +150,7 @@ cd /Users/sean/Desktop/cyber/jumper-desktop
 用于本地可重复测试时，可追加第 5 个参数覆盖 runtime 根目录（不会改系统容器路径）：
 
 ```bash
-./run-runtime-update.sh darwin-arm64 1.12.22 com.example.sdkSmokeApp http://127.0.0.1:20123 /abs/path/to/runtime-root
+./run-runtime-update.sh darwin-arm64 1.12.22 com.example.sdkSmokeApp http://127.0.0.1:19900 /abs/path/to/runtime-root
 ```
 
 `generate-checksums.sh` / `verify-checksums.sh` 现在默认处理 `manifest.json` 里的全部平台；

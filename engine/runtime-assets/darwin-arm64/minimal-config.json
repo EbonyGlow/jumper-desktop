@@ -7,7 +7,7 @@
   },
   "experimental": {
     "clash_api": {
-      "external_controller": "127.0.0.1:20123",
+      "external_controller": "127.0.0.1:19900",
       "secret": "",
       "default_mode": "rule",
       "access_control_allow_origin": [

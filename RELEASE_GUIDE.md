@@ -4,7 +4,7 @@
 
 ## 1. Release Preconditions
 
-- Flutter 固定版本：`3.41.2`（通过 `.fvmrc`）
+- Flutter 固定版本：`3.41.3`（通过 `.fvmrc`）
 - 本地依赖检查通过：
   - `flutter/packages/jumper_sdk`
   - `flutter/packages/jumper_sdk_platform`

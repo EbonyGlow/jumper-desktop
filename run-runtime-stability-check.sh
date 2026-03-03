@@ -6,7 +6,7 @@ PLATFORM_ARCH="${1:-darwin-arm64}"
 VERSION="${2:-1.12.22}"
 DURATION_SECONDS="${3:-1800}"
 INTERVAL_SECONDS="${4:-5}"
-API_BASE="${5:-http://127.0.0.1:20123}"
+API_BASE="${5:-http://127.0.0.1:19900}"
 
 RUNTIME_DIR="${ROOT_DIR}/engine/runtime-assets/${PLATFORM_ARCH}"
 BINARY_NAME="sing-box"

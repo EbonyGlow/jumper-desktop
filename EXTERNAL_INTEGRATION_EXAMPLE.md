@@ -32,7 +32,7 @@ Future<JumperSdkClient> buildClient() async {
 
   return JumperSdkClient(
     runtimeLaunchOptions: launchOptions,
-    coreApiBaseUri: Uri.parse('http://127.0.0.1:20123'),
+    coreApiBaseUri: Uri.parse('http://127.0.0.1:19900'),
   );
 }
 ```

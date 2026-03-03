@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLATFORM_ARCH="${1:-darwin-arm64}"
 VERSION="${2:-1.12.22}"
-API_BASE="${3:-http://127.0.0.1:20123}"
+API_BASE="${3:-http://127.0.0.1:19900}"
 
 BINARY_NAME="sing-box"
 if [[ "${PLATFORM_ARCH}" == windows-* ]]; then

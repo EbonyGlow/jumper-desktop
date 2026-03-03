@@ -34,10 +34,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Flutter 3.41.2
+      - name: Setup Flutter 3.41.3
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.41.2"
+          flutter-version: "3.41.3"
           channel: stable
           cache: true
 

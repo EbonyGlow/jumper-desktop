@@ -34,6 +34,6 @@ fvm flutter test integration_test/sdk_runtime_chain_test.dart -d macos \
   --dart-define=JUMPER_CORE_ARGS="run --disable-color -c ${STAGED_CONFIG_PATH} -D ${CONTAINER_STAGE_DIR}" \
   --dart-define=JUMPER_CORE_CONFIG_PATH="${STAGED_CONFIG_PATH}" \
   --dart-define=JUMPER_CORE_WORKDIR="${CONTAINER_STAGE_DIR}" \
-  --dart-define=JUMPER_CORE_API_BASE=http://127.0.0.1:20123 \
+  --dart-define=JUMPER_CORE_API_BASE=http://127.0.0.1:19900 \
   --dart-define=JUMPER_ASSUME_BIN_ACCESSIBLE=true \
   --dart-define=JUMPER_SKIP_START=false

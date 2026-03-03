@@ -7,7 +7,7 @@ ASSETS_DIR="${ROOT_DIR}/engine/runtime-assets"
 PLATFORM_ARCH="${1:-darwin-arm64}"
 VERSION="${2:-1.12.22}"
 BUNDLE_ID="${3:-com.example.sdkSmokeApp}"
-API_BASE="${4:-http://127.0.0.1:20123}"
+API_BASE="${4:-http://127.0.0.1:19900}"
 RUNTIME_ROOT_OVERRIDE="${5:-}"
 
 RUNTIME_ROOT=""

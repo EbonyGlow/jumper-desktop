@@ -2,7 +2,7 @@
 set -euo pipefail
 
 RUNTIME_DIR="${1:-}"
-API_BASE="${2:-http://127.0.0.1:20123}"
+API_BASE="${2:-http://127.0.0.1:19900}"
 
 if [[ -z "${RUNTIME_DIR}" ]]; then
   echo "Usage: $0 <runtime_dir> [api_base]"
