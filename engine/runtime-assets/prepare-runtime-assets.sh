@@ -46,7 +46,27 @@ if [[ "${VERSION_INPUT}" == "latest" ]]; then
   VERSION="$(resolve_latest_version)"
 fi
 
+cleanup_stale_platform_versions() {
+  local platform_dir="${ROOT_DIR}/${PLATFORM_ARCH}"
+  local target_prefix="sing-box-${VERSION}-${PLATFORM_ARCH}"
+  [[ -d "${platform_dir}" ]] || return 0
+
+  shopt -s nullglob
+  for stale_path in "${platform_dir}"/sing-box-*-"${PLATFORM_ARCH}"*; do
+    local stale_name
+    stale_name="$(basename "${stale_path}")"
+    case "${stale_name}" in
+      "${target_prefix}"|"${target_prefix}.tar.gz"|"${target_prefix}.zip")
+        continue
+        ;;
+    esac
+    rm -rf "${stale_path}"
+  done
+  shopt -u nullglob
+}
+
 echo "[runtime-assets] Preparing ${PLATFORM_ARCH} version ${VERSION}"
+cleanup_stale_platform_versions
 
 "${ROOT_DIR}/fetch-sing-box.sh" "${PLATFORM_ARCH}" "${VERSION}"
 
