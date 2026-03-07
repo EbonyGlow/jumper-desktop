@@ -547,7 +547,7 @@ std::unordered_map<std::string, std::string>
 JumperSdkPlatformPlugin::ParseFlatJsonObject(const std::string& json_object) const {
   std::unordered_map<std::string, std::string> result;
   const std::regex pair_regex(
-      R"("([^"]+)"\s*:\s*("(?:[^"\\]|\\.)*"|true|false|null|-?\d+(?:\.\d+)?))");
+      "\"([^\"]+)\"\\s*:\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|true|false|null|-?\\d+(?:\\.\\d+)?)");
   for (std::sregex_iterator it(json_object.begin(), json_object.end(), pair_regex), end;
        it != end; ++it) {
     result[it->str(1)] = it->str(2);
