@@ -5,7 +5,6 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <winsock2.h>
-#include <ws2tcpip.h>
 #include <windows.h>
 
 // For getPlatformVersion; remove unless needed for your plugin implementation.
@@ -479,24 +478,18 @@ bool JumperSdkPlatformPlugin::IsCoreApiReachable(int port) const {
   if (!wsa_ready) {
     return false;
   }
-  const std::string port_text = std::to_string(port);
-  addrinfo hints{};
-  hints.ai_family = AF_INET;
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_protocol = IPPROTO_TCP;
-  addrinfo* info = nullptr;
-  if (getaddrinfo("127.0.0.1", port_text.c_str(), &hints, &info) != 0 ||
-      info == nullptr) {
-    return false;
-  }
-  SOCKET socket_fd = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
+  SOCKET socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (socket_fd == INVALID_SOCKET) {
-    freeaddrinfo(info);
     return false;
   }
+  sockaddr_in address{};
+  address.sin_family = AF_INET;
+  address.sin_port = htons(static_cast<u_short>(port));
+  address.sin_addr.s_addr = inet_addr("127.0.0.1");
   u_long non_blocking = 1;
   ioctlsocket(socket_fd, FIONBIO, &non_blocking);
-  const int connect_result = connect(socket_fd, info->ai_addr, static_cast<int>(info->ai_addrlen));
+  const int connect_result =
+      connect(socket_fd, reinterpret_cast<const sockaddr*>(&address), sizeof(address));
   bool ok = false;
   if (connect_result == 0) {
     ok = true;
@@ -526,7 +519,6 @@ bool JumperSdkPlatformPlugin::IsCoreApiReachable(int port) const {
     }
   }
   closesocket(socket_fd);
-  freeaddrinfo(info);
   return ok;
 }
 
