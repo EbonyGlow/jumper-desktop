@@ -1,12 +1,5 @@
 #include "jumper_sdk_platform_plugin.h"
 
-// This must be included before many other Windows headers.
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <winsock2.h>
-#include <windows.h>
-
 // For getPlatformVersion; remove unless needed for your plugin implementation.
 #include <VersionHelpers.h>
 #include <shlobj.h>
@@ -450,7 +443,7 @@ int JumperSdkPlatformPlugin::ResolveCoreApiPort(
                             std::istreambuf_iterator<char>());
   file.close();
   const std::regex controller_regex(
-      R"("external_controller"\s*:\s*"([^"]+)")");
+      "\"external_controller\"\\s*:\\s*\"([^\"]+)\"");
   std::smatch controller_match;
   if (!std::regex_search(content, controller_match, controller_regex)) {
     return 0;

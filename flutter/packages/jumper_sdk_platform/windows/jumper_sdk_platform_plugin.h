@@ -1,6 +1,12 @@
 #ifndef FLUTTER_PLUGIN_JUMPER_SDK_PLATFORM_PLUGIN_H_
 #define FLUTTER_PLUGIN_JUMPER_SDK_PLATFORM_PLUGIN_H_
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <winsock2.h>
+#include <windows.h>
+
 #include <flutter/method_channel.h>
 #include <flutter/encodable_value.h>
 #include <flutter/plugin_registrar_windows.h>
@@ -10,7 +16,6 @@
 #include <map>
 #include <unordered_map>
 #include <vector>
-#include <windows.h>
 
 namespace jumper_sdk_platform {
 
