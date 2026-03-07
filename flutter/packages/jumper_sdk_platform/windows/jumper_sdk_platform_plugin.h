@@ -7,6 +7,8 @@
 
 #include <memory>
 #include <string>
+#include <map>
+#include <unordered_map>
 #include <vector>
 #include <windows.h>
 
@@ -34,6 +36,7 @@ class JumperSdkPlatformPlugin : public flutter::Plugin {
     std::string binary_path;
     std::vector<std::string> arguments;
     std::string working_directory;
+    std::map<std::string, std::string> environment;
   };
   struct RuntimeRequest {
     std::string version;
@@ -44,6 +47,16 @@ class JumperSdkPlatformPlugin : public flutter::Plugin {
   bool StartRealCore(const LaunchOptions& options, std::string* error);
   void StopRealCore();
   bool IsTunnelEnabledInLaunchConfig(const std::vector<std::string>& arguments) const;
+  bool IsRealProcessAlive() const;
+  bool WaitForCoreReady(const LaunchOptions& options, std::string* error) const;
+  int ResolveCoreApiPort(const std::vector<std::string>& arguments) const;
+  bool IsCoreApiReachable(int port) const;
+  bool IsTunInboundEnabledInConfig(const std::string& config_path) const;
+  std::unordered_map<std::string, std::string> ParseFlatJsonObject(
+      const std::string& json_object) const;
+  std::unordered_map<std::string, std::string> ParseTunInboundFromConfig(
+      const std::string& content) const;
+  std::string Trim(const std::string& value) const;
   bool ParseLaunchOptions(const flutter::EncodableMap& args, LaunchOptions* options);
   bool ParseRuntimeRequest(
       const flutter::MethodCall<flutter::EncodableValue>& method_call,
