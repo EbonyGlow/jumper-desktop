@@ -4,9 +4,7 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#include <winsock.h>
 #include <windows.h>
-#include <processenv.h>
 
 #include <flutter/method_channel.h>
 #include <flutter/encodable_value.h>
@@ -55,8 +53,6 @@ class JumperSdkPlatformPlugin : public flutter::Plugin {
   bool IsTunnelEnabledInLaunchConfig(const std::vector<std::string>& arguments) const;
   bool IsRealProcessAlive() const;
   bool WaitForCoreReady(const LaunchOptions& options, std::string* error) const;
-  int ResolveCoreApiPort(const std::vector<std::string>& arguments) const;
-  bool IsCoreApiReachable(int port) const;
   bool IsTunInboundEnabledInConfig(const std::string& config_path) const;
   std::unordered_map<std::string, std::string> ParseFlatJsonObject(
       const std::string& json_object) const;

@@ -39,15 +39,6 @@ std::string QuoteWindowsArg(const std::string& arg) {
   out += "\"";
   return out;
 }
-
-std::string ToUpperAscii(std::string value) {
-  std::transform(
-      value.begin(),
-      value.end(),
-      value.begin(),
-      [](unsigned char ch) { return static_cast<char>(std::toupper(ch)); });
-  return value;
-}
 }  // namespace
 
 // static
@@ -302,38 +293,25 @@ bool JumperSdkPlatformPlugin::StartRealCore(const LaunchOptions& options, std::s
   PROCESS_INFORMATION process_info{};
   std::vector<char> mutable_cmdline(cmdline.begin(), cmdline.end());
   mutable_cmdline.push_back('\0');
-  std::vector<char> env_block;
-  LPVOID environment = nullptr;
-  std::unordered_map<std::string, std::pair<std::string, std::string>>
-      merged_environment;
-  LPCH current_env = GetEnvironmentStringsA();
-  if (current_env != nullptr) {
-    for (LPCSTR it = current_env; *it != '\0';) {
-      const std::string entry(it);
-      const size_t equal = entry.find('=');
-      if (equal != std::string::npos && equal > 0) {
-        const std::string key = entry.substr(0, equal);
-        const std::string value = entry.substr(equal + 1);
-        merged_environment[ToUpperAscii(key)] = std::make_pair(key, value);
-      }
-      it += entry.size() + 1;
-    }
-    FreeEnvironmentStringsA(current_env);
-  }
+  struct EnvBackup {
+    std::string key;
+    bool existed;
+    std::string value;
+  };
+  std::vector<EnvBackup> env_backups;
+  env_backups.reserve(options.environment.size());
   for (const auto& [key, value] : options.environment) {
-    merged_environment[ToUpperAscii(key)] = std::make_pair(key, value);
-  }
-  if (!merged_environment.empty()) {
-    for (const auto& [_, kv] : merged_environment) {
-      const auto& key = kv.first;
-      const auto& value = kv.second;
-      const std::string entry = key + "=" + value;
-      env_block.insert(env_block.end(), entry.begin(), entry.end());
-      env_block.push_back('\0');
+    char* previous_value = nullptr;
+    size_t previous_len = 0;
+    const bool has_previous =
+        (_dupenv_s(&previous_value, &previous_len, key.c_str()) == 0 &&
+         previous_value != nullptr);
+    EnvBackup backup{key, has_previous, has_previous ? std::string(previous_value) : ""};
+    if (previous_value != nullptr) {
+      free(previous_value);
     }
-    // Windows requires a double-NUL terminated environment block.
-    env_block.push_back('\0');
-    environment = env_block.data();
+    env_backups.push_back(std::move(backup));
+    _putenv_s(key.c_str(), value.c_str());
   }
 
   const char* cwd = options.working_directory.empty()
@@ -346,10 +324,17 @@ bool JumperSdkPlatformPlugin::StartRealCore(const LaunchOptions& options, std::s
       nullptr,
       FALSE,
       CREATE_NO_WINDOW,
-      environment,
+      nullptr,
       cwd,
       &startup_info,
       &process_info);
+  for (auto it = env_backups.rbegin(); it != env_backups.rend(); ++it) {
+    if (it->existed) {
+      _putenv_s(it->key.c_str(), it->value.c_str());
+    } else {
+      _putenv_s(it->key.c_str(), "");
+    }
+  }
   if (!created) {
     if (error != nullptr) {
       *error = "CreateProcess failed with code " + std::to_string(GetLastError());
@@ -374,14 +359,12 @@ bool JumperSdkPlatformPlugin::IsRealProcessAlive() const {
 bool JumperSdkPlatformPlugin::WaitForCoreReady(
     const LaunchOptions& options,
     std::string* error) const {
-  const int core_api_port = ResolveCoreApiPort(options.arguments);
-  // Gate "success" on process stability to avoid reporting connected
-  // immediately after a short-lived startup.
+  (void)options;
+  // Gate success on process stability to avoid reporting connected
+  // for short-lived startup failures.
   int stable_checks = 0;
-  const int required_stable_checks = 8;  // ~800ms
-  const int max_checks = 50;             // ~5s
-  bool process_stable = false;
-  bool core_api_ready = false;
+  const int required_stable_checks = 12;  // ~1.2s
+  const int max_checks = 60;              // ~6s
   for (int i = 0; i < max_checks; i++) {
     if (!IsRealProcessAlive()) {
       DWORD exit_code = 0;
@@ -399,120 +382,15 @@ bool JumperSdkPlatformPlugin::WaitForCoreReady(
     }
     stable_checks += 1;
     if (stable_checks >= required_stable_checks) {
-      process_stable = true;
-      if (core_api_port > 0 && IsCoreApiReachable(core_api_port)) {
-        core_api_ready = true;
-        return true;
-      }
+      return true;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
   if (error != nullptr) {
-    if (!process_stable) {
-      *error = "Core process startup readiness timeout";
-    } else if (core_api_port <= 0) {
-      *error = "Core API port missing from launch config";
-    } else if (!core_api_ready) {
-      *error = "Core API not reachable after startup on 127.0.0.1:" +
-               std::to_string(core_api_port);
-    } else {
-      *error = "Core readiness check failed";
-    }
+    *error = "Core process startup readiness timeout";
   }
   return false;
-}
-
-int JumperSdkPlatformPlugin::ResolveCoreApiPort(
-    const std::vector<std::string>& arguments) const {
-  std::string config_path;
-  for (size_t i = 0; i < arguments.size(); ++i) {
-    if (arguments[i] == "-c" && i + 1 < arguments.size()) {
-      config_path = arguments[i + 1];
-      break;
-    }
-  }
-  if (config_path.empty()) {
-    return 0;
-  }
-  std::ifstream file(config_path);
-  if (!file.is_open()) {
-    return 0;
-  }
-  const std::string content((std::istreambuf_iterator<char>(file)),
-                            std::istreambuf_iterator<char>());
-  file.close();
-  const std::regex controller_regex(
-      "\"external_controller\"\\s*:\\s*\"([^\"]+)\"");
-  std::smatch controller_match;
-  if (!std::regex_search(content, controller_match, controller_regex)) {
-    return 0;
-  }
-  const std::string controller = controller_match[1].str();
-  const size_t colon = controller.rfind(':');
-  if (colon == std::string::npos || colon + 1 >= controller.size()) {
-    return 0;
-  }
-  try {
-    return std::stoi(controller.substr(colon + 1));
-  } catch (...) {
-    return 0;
-  }
-}
-
-bool JumperSdkPlatformPlugin::IsCoreApiReachable(int port) const {
-  if (port <= 0 || port > 65535) {
-    return false;
-  }
-  static const bool wsa_ready = []() {
-    WSADATA wsa_data{};
-    return WSAStartup(MAKEWORD(2, 2), &wsa_data) == 0;
-  }();
-  if (!wsa_ready) {
-    return false;
-  }
-  SOCKET socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  if (socket_fd == INVALID_SOCKET) {
-    return false;
-  }
-  sockaddr_in address{};
-  address.sin_family = AF_INET;
-  address.sin_port = htons(static_cast<u_short>(port));
-  address.sin_addr.s_addr = inet_addr("127.0.0.1");
-  u_long non_blocking = 1;
-  ioctlsocket(socket_fd, FIONBIO, &non_blocking);
-  const int connect_result =
-      connect(socket_fd, reinterpret_cast<const sockaddr*>(&address), sizeof(address));
-  bool ok = false;
-  if (connect_result == 0) {
-    ok = true;
-  } else {
-    const int last_error = WSAGetLastError();
-    if (last_error == WSAEWOULDBLOCK || last_error == WSAEINPROGRESS) {
-      fd_set write_set;
-      FD_ZERO(&write_set);
-      FD_SET(socket_fd, &write_set);
-      timeval timeout{};
-      timeout.tv_sec = 1;
-      timeout.tv_usec = 0;
-      const int ready = select(0, nullptr, &write_set, nullptr, &timeout);
-      if (ready > 0 && FD_ISSET(socket_fd, &write_set)) {
-        int socket_error = 0;
-        int opt_len = sizeof(socket_error);
-        if (getsockopt(
-                socket_fd,
-                SOL_SOCKET,
-                SO_ERROR,
-                reinterpret_cast<char*>(&socket_error),
-                &opt_len) == 0 &&
-            socket_error == 0) {
-          ok = true;
-        }
-      }
-    }
-  }
-  closesocket(socket_fd);
-  return ok;
 }
 
 bool JumperSdkPlatformPlugin::IsTunInboundEnabledInConfig(
