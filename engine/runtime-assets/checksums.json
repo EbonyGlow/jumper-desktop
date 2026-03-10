@@ -2,25 +2,25 @@
   "schema_version": 1,
   "artifacts": {
     "darwin-arm64": {
-      "version": "1.13.0",
+      "version": "1.13.2",
       "archive": {
-        "path": "darwin-arm64/sing-box-1.13.0-darwin-arm64.tar.gz",
-        "sha256": "dd8688dd48e64b81105b6def9ec9fa5d22be71f7cb4f2cce20cabdf09b40c067"
+        "path": "darwin-arm64/sing-box-1.13.2-darwin-arm64.tar.gz",
+        "sha256": "d88aa9abd9c43a90094bfbd2aaab7f8d1eeb12c98c8da65d8b1c32fef6ad5985"
       },
       "binary": {
-        "path": "darwin-arm64/sing-box-1.13.0-darwin-arm64/sing-box",
-        "sha256": "de0c313b756524188e0e221381ff9a2fefeda12dd6d33225d36c1c8af951b844"
+        "path": "darwin-arm64/sing-box-1.13.2-darwin-arm64/sing-box",
+        "sha256": "29cf4ef0f1213f82248a18b4ffee1e3768d2d6708b056b90720147c0a9747522"
       }
     },
     "darwin-amd64": {
-      "version": "1.13.0",
+      "version": "1.13.2",
       "archive": {
-        "path": "darwin-amd64/sing-box-1.13.0-darwin-amd64.tar.gz",
-        "sha256": "fbbe71f841e8355f0bcda334f6692ae82c2ddf1c454e4e2896aa17447fbd3b97"
+        "path": "darwin-amd64/sing-box-1.13.2-darwin-amd64.tar.gz",
+        "sha256": "741c768acaafd6f7604c93d7f0b8e5baf6407f07afc5e9add897db7482ba93d1"
       },
       "binary": {
-        "path": "darwin-amd64/sing-box-1.13.0-darwin-amd64/sing-box",
-        "sha256": "9bf180d4f7cb2eb9b1d9249ba575a537d05a9b3d8e99116fea42ce2bb06a624a"
+        "path": "darwin-amd64/sing-box-1.13.2-darwin-amd64/sing-box",
+        "sha256": "669f05b7b5d253c8a456bf28d6379867b6fcbf247281303ee1ef88222e9d6ef3"
       }
     },
     "linux-amd64": {
@@ -57,5 +57,5 @@
       }
     }
   },
-  "generated_at_utc": "2026-03-03T11:19:43Z"
+  "generated_at_utc": "2026-03-10T08:32:51Z"
 }
